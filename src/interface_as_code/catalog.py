@@ -1,5 +1,5 @@
 from __future__ import annotations
-import html,json
+import html,json,subprocess
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -10,13 +10,20 @@ from .policies import check_spec
 def _targets(spec):
     i=spec["interface"];return i.get("consumers") or [i["target"]]
 
+def _revision(root: str|Path) -> str|None:
+    base=Path(root)
+    cwd=base if base.is_dir() else base.parent
+    proc=subprocess.run(["git","rev-parse","HEAD"],cwd=cwd,capture_output=True,text=True,check=False)
+    return proc.stdout.strip() if proc.returncode==0 else None
+
 def build_catalog(root:str|Path,output:str|Path,filters:dict[str,str]|None=None)->dict[str,Any]:
     filters={k:v for k,v in (filters or {}).items() if v}
+    revision=_revision(root)
     out=Path(output);out.mkdir(parents=True,exist_ok=True);details=out/"interfaces";details.mkdir(exist_ok=True);records=[];invalid=[]
     for path in discover_specs(root):
         issues=validate_spec(path)
         if issues:invalid.append({"path":str(path),"issues":[str(x) for x in issues]});continue
-        spec=load_yaml(path);i=spec["interface"];findings=check_spec(spec);record={"id":i["id"],"name":i["name"],"source":i["source"]["system"],"targets":[t["system"] for t in _targets(spec)],"mode":i["mode"],"protocol":spec["contract"]["format"],"criticality":i.get("criticality","") ,"lifecycle":i.get("lifecycle","") ,"owner":spec.get("monitoring",{}).get("owner","") ,"business_object":i.get("source",{}).get("object","") ,"findings":dict(Counter(x.severity for x in findings)),"path":str(path)}
+        spec=load_yaml(path);i=spec["interface"];findings=check_spec(spec);record={"id":i["id"],"name":i["name"],"source":i["source"]["system"],"targets":[t["system"] for t in _targets(spec)],"mode":i["mode"],"protocol":spec["contract"]["format"],"criticality":i.get("criticality","") ,"lifecycle":i.get("lifecycle","") ,"owner":spec.get("monitoring",{}).get("owner","") ,"business_object":i.get("source",{}).get("object","") ,"findings":dict(Counter(x.severity for x in findings)),"path":str(path),"provenance":{"path":str(path),"revision":revision},"operations":{"ownership":spec.get("ownership",{}),"delivery":spec.get("delivery",{}),"retry":spec.get("retry",{}),"monitoring":spec.get("monitoring",{}),"reconciliation":spec.get("reconciliation",{}),"sla":spec.get("sla",{}),"security":spec.get("security",{})}}
         if filters.get("system") and filters["system"] not in [record["source"], *record["targets"]]:
             continue
         if filters.get("protocol") and record["protocol"] != filters["protocol"]:

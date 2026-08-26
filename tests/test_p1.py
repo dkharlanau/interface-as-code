@@ -100,3 +100,13 @@ def test_scoped_catalog_filters_topology(tmp_path):
     assert all('SAP-S4' in [x['source'],*x['targets']] for x in result['interfaces'])
     topology=(tmp_path/'scoped/topology.mmd').read_text()
     assert 'SAP-S4' in topology
+
+
+def test_catalog_carries_operational_context_and_provenance(tmp_path):
+    build_catalog(ROOT/'examples',tmp_path/'catalog')
+    svc=CatalogService(tmp_path/'catalog')
+    ops=svc.operations('CUSTOMER-MDG-S4-01')
+    assert ops['operations']['retry']['replay']
+    assert ops['operations']['reconciliation']['key']=='customer_id'
+    assert 'revision' in ops['provenance']
+    assert svc.status()['summary']['invalid']==0

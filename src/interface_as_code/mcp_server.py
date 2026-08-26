@@ -29,10 +29,14 @@ def create_server(catalog_path: str):
 
     @server.tool()
     def get_interface_operations(interface_id: str) -> dict:
-        """Return readiness summary, ownership and source path for support/architecture context."""
-        item=service.get(interface_id)
-        if not item:return {"error":"not_found","interface_id":interface_id}
-        return {"id":item["id"],"owner":item.get("owner"),"findings":item.get("findings",{}),"source_path":item.get("path"),"catalog":str(service.path)}
+        """Return ownership, recovery/replay, monitoring, reconciliation, readiness and provenance."""
+        item=service.operations(interface_id)
+        return item or {"error":"not_found","interface_id":interface_id}
+
+    @server.tool()
+    def get_catalog_status() -> dict:
+        """Return catalog validity summary, invalid-spec list and catalog source path."""
+        return service.status()
 
     return server
 

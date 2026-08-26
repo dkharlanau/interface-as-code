@@ -8,7 +8,7 @@ interface-as-code catalog interfaces -o generated/catalog
 interface-as-code-mcp --catalog generated/catalog/index.json
 ```
 
-Tools list/search/get validated interfaces and return source/catalog context. Invalid specifications never enter the catalog index.
+Tools list/search/get validated interfaces, return ownership plus recovery/replay/monitoring/reconciliation context, readiness findings, and expose catalog validity status. Every catalog record carries source-path and Git revision provenance when built inside a Git worktree. Invalid specifications never enter the catalog index.
 
 ## Threat model
 

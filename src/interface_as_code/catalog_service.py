@@ -25,3 +25,9 @@ class CatalogService:
         return out
     def get(self, interface_id: str) -> dict[str, Any] | None:
         return next((x for x in self.list() if x.get("id")==interface_id),None)
+    def status(self) -> dict[str, Any]:
+        return {"catalog_path":str(self.path),"summary":self.catalog.get("summary",{}),"invalid":self.catalog.get("invalid",[])}
+    def operations(self, interface_id: str) -> dict[str, Any] | None:
+        item=self.get(interface_id)
+        if not item:return None
+        return {"id":item["id"],"operations":item.get("operations",{}),"findings":item.get("findings",{}),"provenance":item.get("provenance",{"path":item.get("path")})}
