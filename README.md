@@ -1,32 +1,52 @@
 # Interface as Code
 
-A versionable, machine-readable way to describe **how an enterprise interface behaves in production** — contract, mapping, delivery semantics, retry, monitoring, ownership, reconciliation, and tests.
+**Git-native operational contracts and governance for enterprise integrations.**
 
-Interface documentation is usually fragmented across Confluence pages, Excel mapping files, integration middleware, tickets, diagrams, and runbooks. That makes it difficult to answer basic operational questions reliably: *What is the source of truth? Is replay safe? Who owns a failure? How do we prove the target caught up?*
+OpenAPI/AsyncAPI can tell you what an API or message contract looks like. Interface as Code captures the operational questions that usually remain fragmented across Confluence, Excel, middleware, tickets and runbooks:
 
-Interface as Code puts those answers in one validated specification and provides a foundation for enterprise integration governance in Git.
+- Who owns this interface and its failures?
+- Is replay safe and idempotent?
+- Where do failed messages go?
+- Which signals prove it is healthy?
+- How do we reconcile source and target business data?
+- Is the interface production-ready?
+- What does a proposed change actually break?
+- What does the full integration landscape look like?
 
-## What is implemented
+## Working toolkit
 
-This repository now contains a working v0.1 core:
+```bash
+python -m pip install -e ".[dev]"
 
-- canonical YAML specification
-- JSON Schema validation
-- deterministic semantic validation
-- CLI: `iac validate` and `iac render`
-- generated Markdown and Mermaid views
-- SAP IDoc example: MDG → S/4HANA customer replication
-- vendor-neutral REST API example
-- pytest coverage
-- GitHub Actions validation
+interface-as-code init interfaces/customer --profile sap-idoc \
+  --id CUSTOMER-MDG-S4-01 --name "Customer replication" \
+  --source SAP-MDG --target SAP-S4
+interface-as-code validate interfaces/
+interface-as-code check interfaces/ --fail-on error
+interface-as-code diff old/interface.yaml new/interface.yaml
+interface-as-code catalog interfaces/ -o generated/catalog
+```
 
-Product direction is tracked in [PRODUCT.md](PRODUCT.md). The prioritized implementation backlog is in [BACKLOG.md](BACKLOG.md) and GitHub Issues.
+The short `iac` command remains as a compatibility alias, while `interface-as-code` is the canonical public CLI name to avoid confusion with Infrastructure as Code.
 
-## Example
+## Bootstrap an existing Excel interface list
+
+Export the sheet to CSV:
+
+```bash
+interface-as-code import-csv interface-list.csv interfaces/
+```
+
+The importer generates valid starter specs plus `import-report.json` listing every missing owner, support route, business key or system field as an explicit gap. It never silently invents operational facts.
+
+## Reference landscape
+
+`examples/reference-landscape/` contains an inventory for **30 synthetic enterprise interfaces** across SAP IDoc, REST, event/Kafka, file/batch and B2B/EDI. CI materializes and validates that portfolio. Tests also exercise 50-row inventory migration and 100-interface catalog generation.
+
+## Model
 
 ```yaml
 version: "1.0"
-
 interface:
   id: CUSTOMER-MDG-S4-01
   name: Customer replication from SAP MDG to S/4HANA
@@ -35,122 +55,72 @@ interface:
   mode: async
   pattern: message-driven
   criticality: high
-
-trigger:
-  event: CustomerApproved
-
+  lifecycle: active
+ownership:
+  business: Customer Master Data
+  technical: SAP MDG Integration
+  support: Customer Master Data Operations
 contract:
   format: IDoc
   message_type: DEBMAS
-  basic_type: DEBMAS07
-
 delivery:
   guarantee: at-least-once
-  ordering: per-key
-  idempotency:
-    required: true
-    key: customer_id
-
-mapping:
-  file: mapping.yaml
-
+  idempotency: {required: true, key: customer_id}
 retry:
   strategy: manual
   dead_letter: SAP AIF error queue
-
+  replay: Reprocess after correction in the operational monitor.
 monitoring:
   owner: Customer Master Data Operations
   support_route: SAP AIF
-
+  business_key: customer_id
+  signals: [technical_failure, business_validation_failure, processing_age]
 reconciliation:
   key: customer_id
   frequency: daily
   source_of_truth: SAP-MDG
+  comparison: Compare approved MDG customers with replicated S/4 customers.
 ```
 
-## Quick start
+## Typed composition instead of duplication
 
-```bash
-python -m pip install -e ".[dev]"
-
-iac validate examples/sap-mdg-to-s4-customer/interface.yaml
-
-iac render examples/sap-mdg-to-s4-customer/interface.yaml \
-  -o generated/customer-interface.md
-
-pytest -q
+```yaml
+contract:
+  format: REST
+  ref: {kind: openapi, uri: ./openapi.yaml}
+mapping:
+  ref: {kind: mapping-as-code, uri: ../mapping/customer.yaml, revision: v1}
+reconciliation:
+  key: customer_id
+  frequency: daily
+  source_of_truth: SAP-MDG
+  ref: {kind: reconciliation-as-code, uri: ../controls/customer.yaml}
 ```
 
-Render only the sequence diagram:
+Local references and optional SHA-256 pins are checked deterministically. External HTTP/Git references are explicit but are not silently fetched during ordinary validation.
 
-```bash
-iac render examples/sap-mdg-to-s4-customer/interface.yaml --format mermaid
-```
+## Why not replace OpenAPI, AsyncAPI, Backstage, LeanIX or SAP Integration Assessment?
 
-## Why this is different from OpenAPI or AsyncAPI
+Those tools remain sources of truth for contracts, catalogs or technology decisions. Interface as Code focuses on the layer between design and operations: delivery semantics, recovery, ownership, monitoring, reconciliation, readiness and change impact.
 
-OpenAPI and AsyncAPI are excellent contract formats. Interface as Code targets the layer around the contract that enterprise delivery and operations still have to manage:
+## Documentation
 
-| Concern | Interface as Code |
-| --- | --- |
-| Message/API contract | referenced or summarized |
-| Field mapping | linked artifact |
-| Retry/replay policy | explicit |
-| Idempotency | explicit |
-| Monitoring ownership | explicit |
-| Business reconciliation | explicit |
-| Test intent | explicit |
-| Human documentation | generated |
-| Agent context | generated from validated source |
-
-It is designed to complement existing interface-description standards, not replace them.
-
-## Repository layout
-
-```text
-.
-├── docs/
-│   ├── agent-context.md
-│   ├── specification.md
-│   └── validation.md
-├── examples/
-│   ├── rest-order-api/
-│   └── sap-mdg-to-s4-customer/
-├── src/interface_as_code/
-│   ├── schemas/interface.schema.json
-│   ├── cli.py
-│   ├── loader.py
-│   ├── renderer.py
-│   └── validator.py
-├── tests/
-├── BACKLOG.md
-├── PRODUCT.md
-├── pyproject.toml
-└── ROADMAP.md
-```
-
-## Design principles
-
-- deterministic validation first
-- Git-friendly and diffable
-- portable across integration technologies
-- operational semantics are first-class
-- business reconciliation is part of the interface definition
-- references instead of duplicating specialized models
-- machine-readable enough for agents, readable enough for reviews
+- [Product strategy](PRODUCT.md)
+- [Prioritized backlog](BACKLOG.md)
+- [Domain model](docs/domain-model.md)
+- [Excel/CSV migration](docs/migration-from-excel.md)
+- [Readiness policies](docs/readiness.md)
+- [Semantic diff](docs/semantic-diff.md)
+- [Portfolio catalog](docs/catalog.md)
+- [Typed references](docs/composition.md)
 
 ## Related projects
 
 - [Mapping as Code](https://github.com/dkharlanau/mapping-as-code)
-- [Transformation Graph](https://github.com/dkharlanau/transformation-graph)
 - [Reconciliation as Code](https://github.com/dkharlanau/reconciliation-as-code)
+- [Transformation Graph](https://github.com/dkharlanau/transformation-graph)
 - [Process as Code](https://github.com/dkharlanau/process-as-code)
-- [Enterprise Change Graph](https://github.com/dkharlanau/enterprise-change-graph)
-- [Decision Tables as Code](https://github.com/dkharlanau/decision-tables-as-code)
-- [Data Relationship Map](https://github.com/dkharlanau/data-relationship-map)
-- [Cutover Graph](https://github.com/dkharlanau/cutover-graph)
-- [Project Evidence Graph](https://github.com/dkharlanau/project-evidence-graph)
 
 ## Status
 
-**v0.1 core implemented.** Current P0 work focuses on enterprise model stabilization, fast bootstrap from templates/CSV, production-readiness policies, semantic change impact, portfolio catalog generation, and CI adoption.
+**v0.2 P0 governance loop:** bootstrap → validate → readiness → semantic diff → catalog. Next depth is standards/SAP adapters, policy packs, observability, test generation, drift detection and MCP consumption.

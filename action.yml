@@ -1,0 +1,55 @@
+name: Interface as Code
+description: Validate enterprise interface specs and enforce deterministic production-readiness policies.
+author: Dzmitryi Kharlanau
+branding:
+  icon: git-merge
+  color: blue
+inputs:
+  path:
+    description: File or directory containing interface.yaml specifications
+    required: false
+    default: .
+  fail-on:
+    description: Readiness severity that fails the check (error, warning, info, none)
+    required: false
+    default: error
+  base-ref:
+    description: Optional git base ref used to generate semantic diffs for changed interface.yaml files
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install Interface as Code
+      shell: bash
+      run: python -m pip install "${{ github.action_path }}"
+    - name: Validate specifications
+      shell: bash
+      run: interface-as-code validate "${{ inputs.path }}"
+    - name: Production-readiness report
+      shell: bash
+      run: |
+        set +e
+        interface-as-code check "${{ inputs.path }}" --fail-on "${{ inputs.fail-on }}" | tee /tmp/iac-readiness.md
+        rc=${PIPESTATUS[0]}
+        cat /tmp/iac-readiness.md >> "$GITHUB_STEP_SUMMARY"
+        exit $rc
+    - name: Semantic diff for changed specifications
+      if: inputs.base-ref != ''
+      shell: bash
+      run: |
+        set -e
+        echo "## Interface semantic changes" >> "$GITHUB_STEP_SUMMARY"
+        git diff --name-only "${{ inputs.base-ref }}...HEAD" -- '*/interface.yaml' '**/interface.yaml' | while read -r file; do
+          [ -z "$file" ] && continue
+          old="$(mktemp)"
+          if git show "${{ inputs.base-ref }}:$file" > "$old" 2>/dev/null; then
+            echo "### $file" >> "$GITHUB_STEP_SUMMARY"
+            interface-as-code diff "$old" "$file" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- New interface: \`$file\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        done

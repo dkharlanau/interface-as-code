@@ -1,13 +1,10 @@
 name: Validate interface specifications
-
 on:
   push:
     branches: [main]
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -18,5 +15,10 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
       - run: pytest -q
-      - run: iac validate examples/sap-mdg-to-s4-customer/interface.yaml
-      - run: iac validate examples/rest-order-api/interface.yaml
+      - run: interface-as-code validate examples/sap-mdg-to-s4-customer
+      - run: interface-as-code validate examples/rest-order-api
+      - run: interface-as-code check examples/sap-mdg-to-s4-customer --fail-on error
+      - run: interface-as-code check examples/rest-order-api --fail-on error
+      - run: interface-as-code import-csv examples/reference-landscape/inventory.csv generated/reference-landscape
+      - run: interface-as-code validate generated/reference-landscape
+      - run: interface-as-code catalog generated/reference-landscape -o generated/reference-catalog

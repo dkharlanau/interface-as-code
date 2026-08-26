@@ -4,22 +4,26 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interface-as-code"
-version = "0.1.0"
-description = "Versionable interface specifications with deterministic validation and documentation generation."
+version = "0.2.0"
+description = "Git-native operational contracts and governance for enterprise integrations."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "Dzmitryi Kharlanau"}]
-dependencies = [
-  "PyYAML>=6.0",
-  "jsonschema>=4.21",
-]
+keywords = ["enterprise-integration", "integration-governance", "apiops", "sap", "openapi", "asyncapi", "gitops"]
+dependencies = ["PyYAML>=6.0", "jsonschema>=4.21"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
+interface-as-code = "interface_as_code.cli:main"
 iac = "interface_as_code.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dkharlanau/interface-as-code"
+Repository = "https://github.com/dkharlanau/interface-as-code"
+Issues = "https://github.com/dkharlanau/interface-as-code/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
