@@ -4,7 +4,7 @@ A versionable, machine-readable way to describe **how an enterprise interface be
 
 Interface documentation is usually fragmented across Confluence pages, Excel mapping files, integration middleware, tickets, diagrams, and runbooks. That makes it difficult to answer basic operational questions reliably: *What is the source of truth? Is replay safe? Who owns a failure? How do we prove the target caught up?*
 
-Interface as Code puts those answers in one validated specification.
+Interface as Code puts those answers in one validated specification and provides a foundation for enterprise integration governance in Git.
 
 ## What is implemented
 
@@ -19,6 +19,8 @@ This repository now contains a working v0.1 core:
 - vendor-neutral REST API example
 - pytest coverage
 - GitHub Actions validation
+
+Product direction is tracked in [PRODUCT.md](PRODUCT.md). The prioritized implementation backlog is in [BACKLOG.md](BACKLOG.md) and GitHub Issues.
 
 ## Example
 
@@ -121,6 +123,8 @@ It is designed to complement existing interface-description standards, not repla
 │   ├── renderer.py
 │   └── validator.py
 ├── tests/
+├── BACKLOG.md
+├── PRODUCT.md
 ├── pyproject.toml
 └── ROADMAP.md
 ```
@@ -149,4 +153,4 @@ It is designed to complement existing interface-description standards, not repla
 
 ## Status
 
-**v0.1 core implemented.** The next focus is richer composition with mapping/reconciliation artifacts, compatibility with OpenAPI/AsyncAPI, and generated operational controls.
+**v0.1 core implemented.** Current P0 work focuses on enterprise model stabilization, fast bootstrap from templates/CSV, production-readiness policies, semantic change impact, portfolio catalog generation, and CI adoption.
