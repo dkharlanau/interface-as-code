@@ -10,15 +10,25 @@ from .policies import check_spec
 def _targets(spec):
     i=spec["interface"];return i.get("consumers") or [i["target"]]
 
-def build_catalog(root:str|Path,output:str|Path)->dict[str,Any]:
+def build_catalog(root:str|Path,output:str|Path,filters:dict[str,str]|None=None)->dict[str,Any]:
+    filters={k:v for k,v in (filters or {}).items() if v}
     out=Path(output);out.mkdir(parents=True,exist_ok=True);details=out/"interfaces";details.mkdir(exist_ok=True);records=[];invalid=[]
     for path in discover_specs(root):
         issues=validate_spec(path)
         if issues:invalid.append({"path":str(path),"issues":[str(x) for x in issues]});continue
-        spec=load_yaml(path);i=spec["interface"];findings=check_spec(spec);record={"id":i["id"],"name":i["name"],"source":i["source"]["system"],"targets":[t["system"] for t in _targets(spec)],"mode":i["mode"],"protocol":spec["contract"]["format"],"criticality":i.get("criticality","") ,"lifecycle":i.get("lifecycle","") ,"owner":spec.get("monitoring",{}).get("owner","") ,"business_object":i.get("source",{}).get("object","") ,"findings":dict(Counter(x.severity for x in findings)),"path":str(path)};records.append(record)
+        spec=load_yaml(path);i=spec["interface"];findings=check_spec(spec);record={"id":i["id"],"name":i["name"],"source":i["source"]["system"],"targets":[t["system"] for t in _targets(spec)],"mode":i["mode"],"protocol":spec["contract"]["format"],"criticality":i.get("criticality","") ,"lifecycle":i.get("lifecycle","") ,"owner":spec.get("monitoring",{}).get("owner","") ,"business_object":i.get("source",{}).get("object","") ,"findings":dict(Counter(x.severity for x in findings)),"path":str(path)}
+        if filters.get("system") and filters["system"] not in [record["source"], *record["targets"]]:
+            continue
+        if filters.get("protocol") and record["protocol"] != filters["protocol"]:
+            continue
+        if filters.get("owner") and record["owner"] != filters["owner"]:
+            continue
+        if filters.get("criticality") and record["criticality"] != filters["criticality"]:
+            continue
+        records.append(record)
         body=f"<h1>{html.escape(i['name'])}</h1><p><code>{html.escape(i['id'])}</code></p><p>{html.escape(record['source'])} → {html.escape(', '.join(record['targets']))}</p><h2>Readiness</h2><ul>"+"".join(f"<li><strong>{html.escape(x.severity)}</strong> {html.escape(x.code)} — {html.escape(x.message)}</li>" for x in findings)+"</ul>"
         (details/f"{i['id']}.html").write_text("<!doctype html><meta charset='utf-8'><title>"+html.escape(i['name'])+"</title>"+body,encoding="utf-8")
-    summary={"total":len(records),"invalid":len(invalid),"protocols":dict(Counter(x["protocol"] for x in records)),"criticality":dict(Counter(x["criticality"] for x in records)),"systems":len({x["source"] for x in records}|{t for x in records for t in x["targets"]})};index={"summary":summary,"interfaces":records,"invalid":invalid};(out/"index.json").write_text(json.dumps(index,indent=2),encoding="utf-8")
+    summary={"total":len(records),"invalid":len(invalid),"filters":filters,"protocols":dict(Counter(x["protocol"] for x in records)),"criticality":dict(Counter(x["criticality"] for x in records)),"systems":len({x["source"] for x in records}|{t for x in records for t in x["targets"]})};index={"summary":summary,"interfaces":records,"invalid":invalid};(out/"index.json").write_text(json.dumps(index,indent=2),encoding="utf-8")
     edges=[f'    "{r["source"]}" -->|"{r["id"]}"| "{target}"' for r in records for target in r["targets"]];(out/"topology.mmd").write_text("flowchart LR\n"+"\n".join(edges)+"\n",encoding="utf-8")
     rows="".join(f"<tr data-search='{html.escape((r['id']+' '+r['name']+' '+r['source']+' '+' '.join(r['targets'])+' '+r['protocol']+' '+r['owner']).lower())}' data-protocol='{html.escape(r['protocol'])}' data-criticality='{html.escape(r['criticality'])}' data-lifecycle='{html.escape(r['lifecycle'])}' data-owner='{html.escape(r['owner'])}'><td><a href='interfaces/{html.escape(r['id'])}.html'>{html.escape(r['id'])}</a></td><td>{html.escape(r['name'])}</td><td>{html.escape(r['source'])}</td><td>{html.escape(', '.join(r['targets']))}</td><td>{html.escape(r['protocol'])}</td><td>{html.escape(r['criticality'])}</td><td>{html.escape(r['lifecycle'])}</td><td>{html.escape(r['owner'])}</td></tr>" for r in records)
     def options(field):return "<option value=''>All</option>"+"".join(f"<option>{html.escape(x)}</option>" for x in sorted({str(r[field]) for r in records if r[field]}))

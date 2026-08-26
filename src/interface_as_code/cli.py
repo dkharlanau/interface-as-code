@@ -90,7 +90,8 @@ def _diff(args):
     ranks={"breaking":4,"high-risk":3,"review":2,"informational":1};threshold=ranks.get(args.fail_on,99);return 1 if any(ranks[x.severity]>=threshold for x in changes) else 0
 
 def _catalog(args):
-    result=build_catalog(args.path,args.output);print(f"CATALOG {result['summary']['total']} valid / {result['summary']['invalid']} invalid -> {args.output}");return 1 if result['summary']['invalid'] else 0
+    filters={"system":args.system,"protocol":args.protocol,"owner":args.owner,"criticality":args.criticality}
+    result=build_catalog(args.path,args.output,filters);print(f"CATALOG {result['summary']['total']} valid / {result['summary']['invalid']} invalid -> {args.output}");return 1 if result['summary']['invalid'] else 0
 
 def _standard(args,kind):
     out=Path(args.output);out.mkdir(parents=True,exist_ok=True);fn=import_openapi if kind=="openapi" else import_asyncapi;spec,warnings=fn(args.contract,interface_id=args.interface_id,source=args.source,target=args.target,output_dir=out);path=out/"interface.yaml";previous=load_yaml(path) if path.exists() and args.force else None
@@ -149,7 +150,7 @@ def build_parser():
         s=sub.add_parser(command);s.add_argument("contract");s.add_argument("output");s.add_argument("--id",dest="interface_id",required=True);s.add_argument("--source",required=True);s.add_argument("--target",required=True);s.add_argument("--force",action="store_true")
     c=sub.add_parser("check");c.add_argument("path");c.add_argument("--format",choices=["markdown","json","github"],default="markdown");c.add_argument("--fail-on",choices=["error","warning","info","none"],default="none");c.add_argument("--policy");c.add_argument("--overlay")
     d=sub.add_parser("diff");d.add_argument("old",help="File or REV:path/to/interface.yaml");d.add_argument("new",help="File or REV:path/to/interface.yaml");d.add_argument("--format",choices=["markdown","json"],default="markdown");d.add_argument("--fail-on",choices=["breaking","high-risk","review","informational","none"],default="none")
-    cat=sub.add_parser("catalog");cat.add_argument("path");cat.add_argument("-o","--output",default="generated/catalog")
+    cat=sub.add_parser("catalog");cat.add_argument("path");cat.add_argument("-o","--output",default="generated/catalog");cat.add_argument("--system");cat.add_argument("--protocol");cat.add_argument("--owner");cat.add_argument("--criticality",choices=["low","medium","high","critical"])
     for command in ("controls","observability","test-plan","sap-summary"):
         g=sub.add_parser(command);g.add_argument("spec");g.add_argument("--format",choices=["markdown","yaml"],default="markdown");g.add_argument("-o","--output");g.add_argument("--overlay")
     a=sub.add_parser("export");a.add_argument("adapter",choices=["backstage","leanix"]);a.add_argument("spec");a.add_argument("-o","--output")

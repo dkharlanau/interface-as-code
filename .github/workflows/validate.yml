@@ -26,3 +26,14 @@ jobs:
       - run: interface-as-code import-csv examples/reference-landscape/inventory.csv generated/reference-landscape
       - run: interface-as-code validate generated/reference-landscape
       - run: interface-as-code catalog generated/reference-landscape -o generated/reference-catalog
+
+  mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[mcp]"
+      - run: interface-as-code catalog examples -o generated/mcp-catalog
+      - run: python -c "from interface_as_code.mcp_server import create_server; server=create_server('generated/mcp-catalog/index.json'); print(type(server).__name__)"

@@ -85,3 +85,18 @@ def test_github_check_output(tmp_path):
 def test_leanix_inbound_is_comparison_not_overwrite():
     from interface_as_code.adapters import compare_leanix_snapshot
     diffs=compare_leanix_snapshot(load_yaml(ROOT/'examples/rest-order-api/interface.yaml'),{'externalId':'ORDER-API-01','provider':'WRONG'});assert diffs==[{'field':'provider','interface_as_code':'Commerce-Platform','leanix':'WRONG','status':'different'}]
+
+
+def test_import_detects_inconsistent_system_spelling(tmp_path):
+    csv=tmp_path/'systems.csv'
+    csv.write_text('interface_id,name,source,target,protocol,owner,support_route,business_key\nSYS-001,One,SAP-S4,OMS,REST,Ops,Q,id1\nSYS-002,Two,SAP S4,WMS,REST,Ops,Q,id2\n',encoding='utf-8')
+    report=import_csv(csv,tmp_path/'out')
+    assert any(g['field']=='system_name_consistency' for g in report['gaps'])
+
+def test_scoped_catalog_filters_topology(tmp_path):
+    result=build_catalog(ROOT/'examples',tmp_path/'scoped',{'system':'SAP-S4'})
+    assert result['summary']['filters']['system']=='SAP-S4'
+    assert result['interfaces']
+    assert all('SAP-S4' in [x['source'],*x['targets']] for x in result['interfaces'])
+    topology=(tmp_path/'scoped/topology.mmd').read_text()
+    assert 'SAP-S4' in topology

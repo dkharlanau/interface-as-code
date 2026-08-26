@@ -23,13 +23,16 @@ def _id(value: str,row:int)->str:
     if len(candidate)<3: candidate=f"IF-{row:03d}"
     return candidate[:64]
 
+def _system_fingerprint(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.strip().lower())
+
 def _protocol(value: str)->str:
     lookup={"idoc":"IDoc","rest":"REST","api":"REST","odata":"OData","soap":"SOAP","kafka":"Kafka","jms":"JMS","csv":"CSV","json":"JSON","xml":"XML","edi":"EDI","file":"File","sftp":"File"}
     return lookup.get(value.strip().lower(),value.strip() or "File")
 
 def import_csv(csv_path: str|Path, output_dir: str|Path, column_map: dict[str,str]|None=None, system_map: dict[str,str]|None=None)->dict[str,Any]:
     column_map=column_map or {}; system_map=system_map or {}; output=Path(output_dir); output.mkdir(parents=True,exist_ok=True)
-    gaps:list[ImportGap]=[]; generated:list[str]=[]; lineage:dict[str,Any]={}; seen:set[str]=set()
+    gaps:list[ImportGap]=[]; generated:list[str]=[]; lineage:dict[str,Any]={}; seen:set[str]=set(); system_forms:dict[str,set[str]]={}
     with Path(csv_path).open(newline="",encoding="utf-8-sig") as handle:
         reader=csv.DictReader(handle)
         for row_no,row in enumerate(reader,2):
@@ -39,7 +42,16 @@ def import_csv(csv_path: str|Path, output_dir: str|Path, column_map: dict[str,st
             if iid in seen: gaps.append(ImportGap(row_no,iid,"interface_id","Duplicate interface ID; row skipped.")); continue
             seen.add(iid); name=get("name") or f"Imported interface {iid}"
             if len(name)<3:name=f"{name} interface"
-            src_raw,tgt_raw=get("source"),get("target"); source=system_map.get(src_raw,src_raw) or "TODO-SOURCE"; target=system_map.get(tgt_raw,tgt_raw) or "TODO-TARGET"
+            src_raw,tgt_raw=get("source"),get("target")
+            for raw in (src_raw, tgt_raw):
+                if not raw:
+                    continue
+                fingerprint=_system_fingerprint(raw)
+                forms=system_forms.setdefault(fingerprint,set())
+                if forms and raw not in forms and raw not in system_map:
+                    gaps.append(ImportGap(row_no,iid,"system_name_consistency",f"System name {raw!r} resembles existing spelling(s) {sorted(forms)!r}; normalize explicitly with --normalize-systems."))
+                forms.add(raw)
+            source=system_map.get(src_raw,src_raw) or "TODO-SOURCE"; target=system_map.get(tgt_raw,tgt_raw) or "TODO-TARGET"
             owner=get("owner") or "TODO"; support=get("support_route") or "TODO"; business_key=get("business_key") or "TODO"; protocol=_protocol(get("protocol")); mode=get("mode").lower() or ("batch" if protocol in {"CSV","File"} else "async")
             if mode not in {"sync","async","batch"}:mode="async"
             contract:dict[str,Any]={"format":protocol if protocol in {"IDoc","SOAP","REST","OData","Kafka","JMS","CSV","JSON","XML","EDI","File"} else "File"}
