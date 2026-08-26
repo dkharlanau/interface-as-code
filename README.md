@@ -1,23 +1,38 @@
 # Interface as Code
 
-Versionable interface specifications covering contracts, mappings, retries, monitoring, ownership, reconciliation, and tests.
+A versionable, machine-readable way to describe **how an enterprise interface behaves in production** — contract, mapping, delivery semantics, retry, monitoring, ownership, reconciliation, and tests.
 
-## Problem
+Interface documentation is usually fragmented across Confluence pages, Excel mapping files, integration middleware, tickets, diagrams, and runbooks. That makes it difficult to answer basic operational questions reliably: *What is the source of truth? Is replay safe? Who owns a failure? How do we prove the target caught up?*
 
-Interface specifications are often fragmented across Confluence, Excel mapping sheets, sequence diagrams, tickets, and runbooks.
+Interface as Code puts those answers in one validated specification.
 
-## Core idea
+## What is implemented
 
-Define each interface as a structured, versionable specification covering contract, mapping, retry behavior, monitoring, ownership, and reconciliation.
+This repository now contains a working v0.1 core:
+
+- canonical YAML specification
+- JSON Schema validation
+- deterministic semantic validation
+- CLI: `iac validate` and `iac render`
+- generated Markdown and Mermaid views
+- SAP IDoc example: MDG → S/4HANA customer replication
+- vendor-neutral REST API example
+- pytest coverage
+- GitHub Actions validation
 
 ## Example
 
 ```yaml
+version: "1.0"
+
 interface:
-  id: CUSTOMER-OUT-01
-  source: MDG
-  target: S4
+  id: CUSTOMER-MDG-S4-01
+  name: Customer replication from SAP MDG to S/4HANA
+  source: {system: SAP-MDG, object: BusinessPartner}
+  target: {system: SAP-S4, object: Customer}
   mode: async
+  pattern: message-driven
+  criticality: high
 
 trigger:
   event: CustomerApproved
@@ -25,48 +40,100 @@ trigger:
 contract:
   format: IDoc
   message_type: DEBMAS
+  basic_type: DEBMAS07
+
+delivery:
+  guarantee: at-least-once
+  ordering: per-key
+  idempotency:
+    required: true
+    key: customer_id
 
 mapping:
-  file: customer.mapping.yaml
+  file: mapping.yaml
 
 retry:
   strategy: manual
-  idempotent: true
+  dead_letter: SAP AIF error queue
 
 monitoring:
-  owner: Customer Operations
+  owner: Customer Master Data Operations
+  support_route: SAP AIF
 
 reconciliation:
   key: customer_id
+  frequency: daily
+  source_of_truth: SAP-MDG
 ```
 
-## Initial scope
+## Quick start
 
-- canonical interface schema
-- validation
-- mapping references
-- retry/idempotency definition
-- ownership
-- monitoring requirements
-- reconciliation definition
-- generated interface documentation
-- sequence/data-flow diagrams
-- test skeletons
+```bash
+python -m pip install -e ".[dev]"
 
-## Long-term direction
+iac validate examples/sap-mdg-to-s4-customer/interface.yaml
 
-Portable interface specifications that can produce documentation, tests, monitoring requirements, and agent context.
+iac render examples/sap-mdg-to-s4-customer/interface.yaml \
+  -o generated/customer-interface.md
+
+pytest -q
+```
+
+Render only the sequence diagram:
+
+```bash
+iac render examples/sap-mdg-to-s4-customer/interface.yaml --format mermaid
+```
+
+## Why this is different from OpenAPI or AsyncAPI
+
+OpenAPI and AsyncAPI are excellent contract formats. Interface as Code targets the layer around the contract that enterprise delivery and operations still have to manage:
+
+| Concern | Interface as Code |
+| --- | --- |
+| Message/API contract | referenced or summarized |
+| Field mapping | linked artifact |
+| Retry/replay policy | explicit |
+| Idempotency | explicit |
+| Monitoring ownership | explicit |
+| Business reconciliation | explicit |
+| Test intent | explicit |
+| Human documentation | generated |
+| Agent context | generated from validated source |
+
+It is designed to complement existing interface-description standards, not replace them.
+
+## Repository layout
+
+```text
+.
+├── docs/
+│   ├── agent-context.md
+│   ├── specification.md
+│   └── validation.md
+├── examples/
+│   ├── rest-order-api/
+│   └── sap-mdg-to-s4-customer/
+├── src/interface_as_code/
+│   ├── schemas/interface.schema.json
+│   ├── cli.py
+│   ├── loader.py
+│   ├── renderer.py
+│   └── validator.py
+├── tests/
+├── pyproject.toml
+└── ROADMAP.md
+```
 
 ## Design principles
 
-- versionable
-- portable
-- machine-readable
-- deterministic-first
-- visual where useful
-- Git-friendly
-- vendor-neutral where practical
-- interoperable with enterprise tools
+- deterministic validation first
+- Git-friendly and diffable
+- portable across integration technologies
+- operational semantics are first-class
+- business reconciliation is part of the interface definition
+- references instead of duplicating specialized models
+- machine-readable enough for agents, readable enough for reviews
 
 ## Related projects
 
@@ -82,4 +149,4 @@ Portable interface specifications that can produce documentation, tests, monitor
 
 ## Status
 
-Planning.
+**v0.1 core implemented.** The next focus is richer composition with mapping/reconciliation artifacts, compatibility with OpenAPI/AsyncAPI, and generated operational controls.

@@ -1,0 +1,15 @@
+version: "1.0"
+mapping:
+  id: customer-core
+  source: SAP-MDG.BusinessPartner
+  target: SAP-S4.Customer
+  fields:
+    - source: business_partner_id
+      target: KUNNR
+      rule: preserve
+    - source: name_1
+      target: NAME1
+      rule: trim
+    - source: country
+      target: LAND1
+      rule: ISO-3166-alpha2

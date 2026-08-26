@@ -1,21 +1,40 @@
 # Roadmap
 
-## Phase 1 — Core model
+## v0.1 — Core specification ✅
 
-Define the canonical structured representation and its schema.
+- [x] canonical YAML model
+- [x] JSON Schema
+- [x] deterministic semantic validator
+- [x] CLI validation
+- [x] Markdown/Mermaid rendering
+- [x] SAP and REST examples
+- [x] tests and CI
 
-## Phase 2 — Validation
+## v0.2 — Composition
 
-Add deterministic validation rules and test fixtures.
+- [ ] formal external references to Mapping as Code and Reconciliation as Code
+- [ ] reference resolver and checksum support
+- [ ] reusable interface profiles
+- [ ] environment overlays without duplicating the base contract
+- [ ] richer test fixtures
 
-## Phase 3 — Visualization
+## v0.3 — Standards interoperability
 
-Add human-readable visual views and generated documentation.
+- [ ] import metadata from OpenAPI
+- [ ] import channel/message metadata from AsyncAPI
+- [ ] generate a compact machine context bundle
+- [ ] map common SAP integration metadata into the canonical model
 
-## Phase 4 — Interoperability
+## v0.4 — Operations
 
-Add import/export to relevant open standards and common project formats.
+- [ ] generate monitoring requirements
+- [ ] generate reconciliation control skeletons
+- [ ] generate incident/runbook sections
+- [ ] policy checks for ownership, replay safety, and observability
 
-## Phase 5 — Automation
+## v1.0 — Stable specification
 
-Add CLI, CI integration, and machine-facing outputs where useful.
+- [ ] compatibility policy
+- [ ] migration tooling
+- [ ] published schema versions
+- [ ] conformance test suite

@@ -1,0 +1,58 @@
+version: "1.0"
+
+interface:
+  id: ORDER-API-01
+  name: Commerce order submission API
+  source:
+    system: Commerce-Platform
+    object: Order
+  target:
+    system: Order-Management
+    object: SalesOrder
+  mode: sync
+  pattern: request-response
+  criticality: critical
+  tags: [rest, order, api]
+
+trigger:
+  operation: POST /orders
+
+contract:
+  format: REST
+  content_type: application/json
+  schema_ref: ./openapi.yaml
+  version: "2026-08"
+
+delivery:
+  guarantee: effectively-once
+  ordering: none
+  idempotency:
+    required: true
+    key: Idempotency-Key
+
+mapping:
+  profile: order-create
+
+retry:
+  strategy: automatic
+  max_attempts: 3
+  backoff: exponential 1s, 5s, 30s
+
+monitoring:
+  owner: Order Platform Operations
+  support_route: API operations queue
+  business_key: order_id
+  signals:
+    - 5xx_rate
+    - p95_latency
+    - rejected_orders
+
+reconciliation:
+  key: order_id
+  frequency: hourly
+  source_of_truth: Commerce-Platform
+  comparison: Submitted order IDs versus accepted order IDs.
+
+sla:
+  expected_latency: 2 seconds
+  recovery_target: 30 minutes

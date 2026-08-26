@@ -1,0 +1,70 @@
+version: "1.0"
+
+interface:
+  id: CUSTOMER-MDG-S4-01
+  name: Customer replication from SAP MDG to S/4HANA
+  description: Replicates approved customer master data from MDG to S/4HANA.
+  source:
+    system: SAP-MDG
+    object: BusinessPartner
+  target:
+    system: SAP-S4
+    object: Customer
+  mode: async
+  pattern: message-driven
+  criticality: high
+  tags: [sap, mdg, customer, idoc]
+
+trigger:
+  event: CustomerApproved
+
+contract:
+  format: IDoc
+  message_type: DEBMAS
+  basic_type: DEBMAS07
+  version: "1"
+
+delivery:
+  guarantee: at-least-once
+  ordering: per-key
+  idempotency:
+    required: true
+    key: customer_id
+
+mapping:
+  file: mapping.yaml
+  profile: customer-core
+
+retry:
+  strategy: manual
+  max_attempts: 3
+  dead_letter: SAP AIF error queue
+  replay: Reprocess after correction using the operational monitor.
+
+monitoring:
+  owner: Customer Master Data Operations
+  support_route: SAP AIF
+  business_key: customer_id
+  signals:
+    - technical_failure
+    - business_validation_failure
+    - processing_age
+
+reconciliation:
+  key: customer_id
+  frequency: daily
+  source_of_truth: SAP MDG
+  comparison: Compare approved MDG customers with successfully replicated S/4 customers.
+
+sla:
+  expected_latency: 15 minutes
+  recovery_target: 4 hours
+
+tests:
+  - id: happy-path
+    description: Approved customer is accepted by S/4HANA.
+    fixture: fixtures/customer-approved.yaml
+    expected: processed
+  - id: duplicate-delivery
+    description: Replayed customer message does not create duplicate state.
+    expected: idempotent

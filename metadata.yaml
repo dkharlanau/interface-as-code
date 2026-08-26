@@ -10,20 +10,25 @@ portfolio:
   sap_proof: 10
   brand_value: 10
 
-status: planning
+status: active
 
 implementation:
   repository_created: true
-  implementation_status: not-started
+  implementation_status: core-v0.1
   codex_fit: 5/5
   sap_access_required: false
+  cli: true
+  schema: true
+  validation: true
+  tests: true
+  ci: true
 
 principles:
   - versionable
   - portable
   - machine-readable
   - deterministic-first
-  - visual
+  - operational-semantics-first
   - git-friendly
   - interoperable
 
