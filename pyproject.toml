@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interface-as-code"
-version = "0.2.0"
+version = "0.3.0"
 description = "Git-native operational contracts and governance for enterprise integrations."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,11 +14,13 @@ keywords = ["enterprise-integration", "integration-governance", "apiops", "sap",
 dependencies = ["PyYAML>=6.0", "jsonschema>=4.21"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "build>=1.2"]
+mcp = ["mcp>=2,<3"]
 
 [project.scripts]
 interface-as-code = "interface_as_code.cli:main"
 iac = "interface_as_code.cli:main"
+interface-as-code-mcp = "interface_as_code.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/dkharlanau/interface-as-code"

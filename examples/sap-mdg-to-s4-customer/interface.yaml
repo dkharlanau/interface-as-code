@@ -1,4 +1,4 @@
-version: "1.0"
+version: '1.0'
 interface:
   id: CUSTOMER-MDG-S4-01
   name: Customer replication from SAP MDG to S/4HANA
@@ -10,51 +10,25 @@ interface:
   criticality: high
   lifecycle: active
   tags: [sap, mdg, customer, idoc]
-ownership:
-  business: Customer Master Data
-  technical: SAP MDG Integration
-  support: Customer Master Data Operations
+ownership: {business: Customer Master Data, technical: SAP MDG Integration, support: Customer Master Data Operations}
 route:
   middleware: [SAP-Integration-Layer]
   external_ids: {catalog: CUSTOMER-MDG-S4-01}
 trigger: {event: CustomerApproved}
-contract:
-  format: IDoc
-  message_type: DEBMAS
-  basic_type: DEBMAS07
-  version: "1"
-delivery:
-  guarantee: at-least-once
-  ordering: per-key
-  idempotency: {required: true, key: customer_id}
-mapping:
-  file: mapping.yaml
-  profile: customer-core
-retry:
-  strategy: manual
-  max_attempts: 3
-  dead_letter: SAP AIF error queue
-  replay: Reprocess after correction using the operational monitor.
+contract: {format: IDoc, message_type: DEBMAS, basic_type: DEBMAS07, version: '1'}
+delivery: {guarantee: at-least-once, ordering: per-key, idempotency: {required: true, key: customer_id}}
+mapping: {file: mapping.yaml, profile: customer-core}
+retry: {strategy: manual, max_attempts: 3, dead_letter: SAP AIF error queue, replay: Reprocess after correction using the operational monitor.}
 monitoring:
   owner: Customer Master Data Operations
   support_route: SAP AIF
   business_key: customer_id
   signals: [technical_failure, business_validation_failure, processing_age]
-reconciliation:
-  key: customer_id
-  frequency: daily
-  source_of_truth: SAP-MDG
-  comparison: Compare approved MDG customers with successfully replicated S/4 customers.
+reconciliation: {key: customer_id, frequency: daily, source_of_truth: SAP-MDG, comparison: Compare approved MDG customers with successfully replicated S/4 customers.}
 sla: {expected_latency: 15 minutes, recovery_target: 4 hours}
-security:
-  transport_encryption: true
-  data_classification: confidential
-  personal_data: true
+security: {transport_encryption: true, data_classification: confidential, personal_data: true}
 tests:
-  - id: happy-path
-    description: Approved customer is accepted by S/4HANA.
-    fixture: fixtures/customer-approved.yaml
-    expected: processed
-  - id: duplicate-delivery
-    description: Replayed customer message does not create duplicate state.
-    expected: idempotent
+- {id: happy-path, description: Approved customer is accepted by S/4HANA., fixture: fixtures/customer-approved.yaml, expected: processed}
+- {id: duplicate-delivery, description: Replayed customer message does not create duplicate state., expected: idempotent}
+profiles:
+  sap: {integration_style: process integration, technology: IDoc, integration_assessment_ref: IA-CUSTOMER-01, aif_namespace: ZMDG, aif_interface: CUSTOMER_OUT, drf_outbound_implementation: '986'}

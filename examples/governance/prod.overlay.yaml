@@ -1,0 +1,6 @@
+version: '1'
+environment: PROD
+set:
+  monitoring.support_route: Production operations queue
+  sla.recovery_target: 30 minutes
+  route.external_ids.prod: IFLOW-123

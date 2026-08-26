@@ -1,0 +1,13 @@
+version: "1.0"
+interface:
+  id: BAD-001
+  name: Invalid example
+  source: {system: A1}
+  target: {system: B1}
+  mode: sync
+trigger: {operation: GET /x}
+contract: {format: REST}
+delivery: {guarantee: effectively-once, idempotency: {required: true, key: request_id}}
+mapping: {profile: identity}
+retry: {strategy: none}
+reconciliation: {key: request_id, frequency: daily, source_of_truth: B1}

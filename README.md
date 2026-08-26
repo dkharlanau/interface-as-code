@@ -2,48 +2,50 @@
 
 **Git-native operational contracts and governance for enterprise integrations.**
 
-OpenAPI/AsyncAPI can tell you what an API or message contract looks like. Interface as Code captures the operational questions that usually remain fragmented across Confluence, Excel, middleware, tickets and runbooks:
+API/message standards describe contracts well. Enterprise operations still need reliable answers to different questions: who owns an interface, whether replay is safe, what is monitored, how source and target are reconciled, whether a release is production-ready, what a change breaks, and whether documentation still matches reality.
 
-- Who owns this interface and its failures?
-- Is replay safe and idempotent?
-- Where do failed messages go?
-- Which signals prove it is healthy?
-- How do we reconcile source and target business data?
-- Is the interface production-ready?
-- What does a proposed change actually break?
-- What does the full integration landscape look like?
+Interface as Code makes those concerns versionable, deterministic and searchable.
 
-## Working toolkit
+## Current capabilities
 
 ```bash
-python -m pip install -e ".[dev]"
+# Create / migrate inventory
+interface-as-code init interfaces/customer --profile sap-idoc --id CUSTOMER-01 --name "Customer replication"
+interface-as-code import-csv interface-list.csv interfaces/
+interface-as-code import-openapi openapi.yaml interfaces/order --id ORDER-API-01 --source Portal --target OMS
+interface-as-code import-asyncapi asyncapi.yaml interfaces/order-event --id ORDER-EVENT-01 --source SAP-S4 --target Fulfillment
 
-interface-as-code init interfaces/customer --profile sap-idoc \
-  --id CUSTOMER-MDG-S4-01 --name "Customer replication" \
-  --source SAP-MDG --target SAP-S4
+# Governance loop
 interface-as-code validate interfaces/
 interface-as-code check interfaces/ --fail-on error
-interface-as-code diff old/interface.yaml new/interface.yaml
+interface-as-code diff HEAD~1:interfaces/customer/interface.yaml interfaces/customer/interface.yaml
 interface-as-code catalog interfaces/ -o generated/catalog
+
+# Generated operational artifacts
+interface-as-code controls interfaces/customer/interface.yaml
+interface-as-code observability interfaces/customer/interface.yaml
+interface-as-code test-plan interfaces/customer/interface.yaml
+
+# Enterprise adapters and runtime evidence
+interface-as-code export backstage interfaces/customer/interface.yaml
+interface-as-code export leanix interfaces/customer/interface.yaml
+interface-as-code sap-summary interfaces/customer/interface.yaml
+interface-as-code drift interfaces/customer/interface.yaml observed-evidence.yaml
 ```
 
-The short `iac` command remains as a compatibility alias, while `interface-as-code` is the canonical public CLI name to avoid confusion with Infrastructure as Code.
+`interface-as-code` is the canonical public command. `iac` remains a compatibility alias.
 
-## Bootstrap an existing Excel interface list
+## Why this is useful
 
-Export the sheet to CSV:
+The product is deliberately not an integration runtime or a replacement for specialized standards. OpenAPI/AsyncAPI remain authoritative contract artifacts; Pact remains contract-test evidence; OpenTelemetry remains the telemetry semantic layer; Backstage/LeanIX remain catalogs; SAP tools remain design/runtime systems. Interface as Code links their relevant facts into one **operational contract** and adds deterministic governance around them.
 
-```bash
-interface-as-code import-csv interface-list.csv interfaces/
-```
+The core loop is:
 
-The importer generates valid starter specs plus `import-report.json` listing every missing owner, support route, business key or system field as an explicit gap. It never silently invents operational facts.
+**bootstrap → validate → readiness → semantic diff → catalog → drift**
 
-## Reference landscape
+That loop becomes more valuable as a landscape grows from one interface to hundreds or thousands.
 
-`examples/reference-landscape/` contains an inventory for **30 synthetic enterprise interfaces** across SAP IDoc, REST, event/Kafka, file/batch and B2B/EDI. CI materializes and validates that portfolio. Tests also exercise 50-row inventory migration and 100-interface catalog generation.
-
-## Model
+## Enterprise model
 
 ```yaml
 version: "1.0"
@@ -80,9 +82,17 @@ reconciliation:
   frequency: daily
   source_of_truth: SAP-MDG
   comparison: Compare approved MDG customers with replicated S/4 customers.
+profiles:
+  sap:
+    integration_style: process integration
+    technology: IDoc
+    aif_namespace: ZMDG
+    aif_interface: CUSTOMER_OUT
 ```
 
-## Typed composition instead of duplication
+## Typed composition
+
+Specialized artifacts are referenced, not copied:
 
 ```yaml
 contract:
@@ -90,29 +100,39 @@ contract:
   ref: {kind: openapi, uri: ./openapi.yaml}
 mapping:
   ref: {kind: mapping-as-code, uri: ../mapping/customer.yaml, revision: v1}
-reconciliation:
-  key: customer_id
-  frequency: daily
-  source_of_truth: SAP-MDG
-  ref: {kind: reconciliation-as-code, uri: ../controls/customer.yaml}
 ```
 
-Local references and optional SHA-256 pins are checked deterministically. External HTTP/Git references are explicit but are not silently fetched during ordinary validation.
+Local refs and optional SHA-256 pins are validated deterministically. External Git/HTTP refs remain explicit and are not silently fetched during ordinary validation.
 
-## Why not replace OpenAPI, AsyncAPI, Backstage, LeanIX or SAP Integration Assessment?
+## Portfolio-scale dogfooding
 
-Those tools remain sources of truth for contracts, catalogs or technology decisions. Interface as Code focuses on the layer between design and operations: delivery semantics, recovery, ownership, monitoring, reconciliation, readiness and change impact.
+`examples/reference-landscape/inventory.csv` contains 30 synthetic enterprise interfaces. Tests also cover 50-row inventory migration and 100-interface catalog builds. The reproducible benchmark currently records roughly 0.17 s / 1.73 s / 15.56 s for 50 / 500 / 5,000 catalog entries on the development container; see [performance baseline](docs/performance.md).
+
+## Read-only MCP
+
+An optional MCP v2 server exposes only the validated catalog index:
+
+```bash
+pip install 'interface-as-code[mcp]'
+interface-as-code catalog interfaces -o generated/catalog
+interface-as-code-mcp --catalog generated/catalog/index.json
+```
+
+It can list/search/read interface context but cannot modify specs or execute enterprise integrations.
 
 ## Documentation
 
-- [Product strategy](PRODUCT.md)
-- [Prioritized backlog](BACKLOG.md)
-- [Domain model](docs/domain-model.md)
-- [Excel/CSV migration](docs/migration-from-excel.md)
-- [Readiness policies](docs/readiness.md)
-- [Semantic diff](docs/semantic-diff.md)
-- [Portfolio catalog](docs/catalog.md)
-- [Typed references](docs/composition.md)
+- [Product strategy](PRODUCT.md) · [Backlog](BACKLOG.md)
+- [Domain model](docs/domain-model.md) · [Specification](docs/specification.md) · [Versioning](docs/versioning.md)
+- [Excel/CSV migration](docs/migration-from-excel.md) · [Standards interoperability](docs/standards-interoperability.md)
+- [Production readiness](docs/readiness.md) · [Semantic diff](docs/semantic-diff.md) · [Drift](docs/drift.md)
+- [Operational generators](docs/operational-generators.md) · [Security](docs/security.md)
+- [Catalog](docs/catalog.md) · [Catalog adapters](docs/catalog-adapters.md) · [SAP profile](docs/sap-profile.md)
+- [Policy packs / overlays](docs/policy-packs-and-overlays.md) · [MCP](docs/mcp.md)
+
+## Stable specification artifact
+
+Specification v1.0 is published in-repository at [`spec/v1.0/interface.schema.json`](spec/v1.0/interface.schema.json). The CLI/package version evolves independently from the spec version.
 
 ## Related projects
 
@@ -123,4 +143,4 @@ Those tools remain sources of truth for contracts, catalogs or technology decisi
 
 ## Status
 
-**v0.2 P0 governance loop:** bootstrap → validate → readiness → semantic diff → catalog. Next depth is standards/SAP adapters, policy packs, observability, test generation, drift detection and MCP consumption.
+**v0.3:** the deterministic operational-governance core, standards import, enterprise adapters, drift and read-only agent surface are implemented. Distribution/search polish and deeper live vendor integrations remain intentionally separate from the core.

@@ -1,0 +1,11 @@
+openapi: 3.1.0
+info:
+  title: Order Submission API
+  version: "2026-08"
+paths:
+  /orders:
+    post:
+      operationId: submitOrder
+      responses:
+        "202":
+          description: Order accepted

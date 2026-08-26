@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from .loader import dump_yaml
 
-PROFILES = ("sap-idoc", "rest-api", "event", "file-batch", "b2b-edi")
+PROFILES = ("sap-idoc", "rest-api", "soap", "event", "file-batch", "b2b-edi")
 
 def _base(interface_id: str, name: str, source: str, target: str) -> dict[str, Any]:
     return {
@@ -38,6 +38,12 @@ def profile_spec(profile: str, interface_id: str, name: str, source: str = "SOUR
         spec["contract"] = {"format": "REST", "content_type": "application/json"}
         spec["retry"] = {"strategy": "none"}
         spec["delivery"] = {"guarantee": "effectively-once", "ordering": "none", "idempotency": {"required": True, "key": "Idempotency-Key"}}
+    elif profile == "soap":
+        i.update({"mode": "sync", "pattern": "request-response", "tags": ["soap", "xml"]})
+        spec["trigger"] = {"operation": "SOAP action TODO"}
+        spec["contract"] = {"format": "SOAP", "content_type": "text/xml", "schema_ref": "TODO WSDL/XSD reference"}
+        spec["retry"] = {"strategy": "none"}
+        spec["delivery"] = {"guarantee": "effectively-once", "ordering": "none", "idempotency": {"required": True, "key": "TODO"}}
     elif profile == "event":
         i.update({"mode": "async", "pattern": "event-driven", "tags": ["event"]})
         spec["contract"] = {"format": "Kafka", "content_type": "application/json"}
@@ -53,10 +59,12 @@ def profile_spec(profile: str, interface_id: str, name: str, source: str = "SOUR
         spec["security"] = {"authentication": "TODO", "transport_encryption": True, "data_classification": "confidential", "external_exposure": True}
     return spec
 
-def write_profile(directory: str | Path, profile: str, interface_id: str, name: str, source: str = "SOURCE", target: str = "TARGET") -> Path:
+def write_profile(directory: str | Path, profile: str, interface_id: str, name: str, source: str = "SOURCE", target: str = "TARGET", minimal: bool = False) -> Path:
     root = Path(directory)
     root.mkdir(parents=True, exist_ok=True)
     spec = profile_spec(profile, interface_id, name, source, target)
+    if minimal:
+        spec.pop("ownership", None); spec.pop("tests", None); spec.pop("security", None); spec.pop("sla", None); spec.pop("route", None)
     path = root / "interface.yaml"
     dump_yaml(spec, path)
     if profile == "sap-idoc":

@@ -1,5 +1,5 @@
 from pathlib import Path
-import yaml
+import json, yaml
 from interface_as_code.validator import semantic_issues, validate_spec
 from interface_as_code.resolver import resolve_reference, ReferenceError
 from interface_as_code.scaffold import PROFILES, write_profile
@@ -46,7 +46,7 @@ def test_policy_engine_has_high_signal_findings():
 
 def test_catalog_build(tmp_path):
     result=build_catalog(ROOT/'examples',tmp_path/'catalog')
-    assert result['summary']['total']==2
+    assert result['summary']['total']>=4
     assert (tmp_path/'catalog/index.html').exists() and (tmp_path/'catalog/topology.mmd').exists()
 
 CASES=[('$.interface.source.system','breaking'),('$.interface.target.system','breaking'),('$.interface.consumers','breaking'),('$.contract.format','breaking'),('$.contract.message_type','breaking'),('$.contract.basic_type','breaking'),('$.contract.schema_ref','breaking'),('$.contract.ref.uri','breaking'),('$.reconciliation.key','breaking'),('$.delivery.guarantee','high-risk'),('$.delivery.idempotency.required','high-risk'),('$.delivery.ordering','high-risk'),('$.retry.strategy','high-risk'),('$.retry.max_attempts','high-risk'),('$.retry.dead_letter','high-risk'),('$.reconciliation.source_of_truth','high-risk'),('$.sla.recovery_target','high-risk'),('$.security.authentication','high-risk'),('$.ownership.business','review'),('$.ownership.technical','review'),('$.ownership.support','review'),('$.monitoring.owner','review'),('$.monitoring.support_route','review'),('$.interface.lifecycle','review'),('$.route.middleware','review'),('$.monitoring.signals','informational'),('$.interface.description','informational'),('$.interface.tags','informational'),('$.tests','informational'),('$.evidence','informational')]

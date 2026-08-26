@@ -1,5 +1,5 @@
 name: Interface as Code
-description: Validate enterprise interface specs and enforce deterministic production-readiness policies.
+description: Validate enterprise interface specs, annotate PRs, and enforce deterministic production-readiness policies.
 author: Dzmitryi Kharlanau
 branding:
   icon: git-merge
@@ -29,13 +29,16 @@ runs:
     - name: Validate specifications
       shell: bash
       run: interface-as-code validate "${{ inputs.path }}"
-    - name: Production-readiness report
+    - name: Annotate production-readiness findings
+      shell: bash
+      run: interface-as-code check "${{ inputs.path }}" --format github --fail-on none
+    - name: Production-readiness gate and summary
       shell: bash
       run: |
         set +e
-        interface-as-code check "${{ inputs.path }}" --fail-on "${{ inputs.fail-on }}" | tee /tmp/iac-readiness.md
+        interface-as-code check "${{ inputs.path }}" --fail-on "${{ inputs.fail-on }}" | tee /tmp/interface-as-code-readiness.md
         rc=${PIPESTATUS[0]}
-        cat /tmp/iac-readiness.md >> "$GITHUB_STEP_SUMMARY"
+        cat /tmp/interface-as-code-readiness.md >> "$GITHUB_STEP_SUMMARY"
         exit $rc
     - name: Semantic diff for changed specifications
       if: inputs.base-ref != ''

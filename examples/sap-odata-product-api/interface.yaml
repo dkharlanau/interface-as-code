@@ -1,0 +1,28 @@
+version: '1.0'
+interface:
+  id: PRODUCT-S4-ODATA-01
+  name: Product query from portal to SAP S/4HANA
+  source: {system: Commerce-Portal, object: ProductQuery}
+  target: {system: SAP-S4, object: Product}
+  mode: sync
+  pattern: request-response
+  criticality: high
+  lifecycle: active
+  tags: [sap, odata, api]
+ownership: {business: Product Operations, technical: SAP API Team, support: SAP Integration Support}
+trigger: {operation: GET /sap/opu/odata/Product}
+contract: {format: OData, content_type: application/json, version: v4}
+delivery: {guarantee: effectively-once, ordering: none, idempotency: {required: true, key: request_id}}
+mapping: {profile: product-query}
+retry: {strategy: none}
+monitoring:
+  owner: SAP Integration Support
+  support_route: API monitoring
+  business_key: request_id
+  signals: [5xx_rate, p95_latency, business_rejections]
+reconciliation: {key: request_id, frequency: daily, source_of_truth: SAP-S4, comparison: Sample portal responses against authoritative S/4 product state.}
+sla: {expected_latency: 2 seconds, recovery_target: 1 hour}
+security: {authentication: OAuth2 client credentials, transport_encryption: true, data_classification: internal, external_exposure: false}
+tests: [{id: query-product, description: Known product is returned successfully., expected: HTTP 200}]
+profiles:
+  sap: {integration_style: process integration, technology: OData V4 / SAP API, integration_assessment_ref: IA-PRODUCT-01, runtime_artifact_id: PRODUCT_API}

@@ -1,0 +1,40 @@
+version: '1.0'
+interface:
+  id: ORDER-S4-EVENT-01
+  name: Order created event from SAP S/4HANA
+  source: {system: SAP-S4, object: SalesOrder}
+  target: {system: Fulfillment-Platform, object: OrderEvent}
+  consumers:
+  - {system: Fulfillment-Platform, object: OrderEvent}
+  - {system: Data-Platform, object: OrderEvent}
+  mode: async
+  pattern: event-driven
+  criticality: high
+  lifecycle: active
+  tags: [sap, event-mesh, event]
+ownership: {business: Order Management, technical: SAP Event Integration, support: Integration Operations}
+route:
+  middleware: [SAP-Event-Mesh]
+  external_ids: {topic: order.created}
+trigger: {event: order.created}
+contract:
+  format: Kafka
+  content_type: application/json
+  version: 1.0.0
+  ref: {kind: asyncapi, uri: ./asyncapi.yaml}
+delivery: {guarantee: at-least-once, ordering: per-key, idempotency: {required: true, key: sales_order_id}}
+mapping: {profile: order-event}
+retry: {strategy: automatic, max_attempts: 5, backoff: exponential, dead_letter: order.created.dlq, replay: 'Replay retained event after correction; consumers deduplicate by sales_order_id.'}
+monitoring:
+  owner: Integration Operations
+  support_route: Event operations queue
+  business_key: sales_order_id
+  signals: [consumer_lag, dead_letters, processing_age]
+reconciliation: {key: sales_order_id, frequency: hourly, source_of_truth: SAP-S4, comparison: Compare created S/4 sales orders to consumed order event IDs.}
+sla: {expected_latency: 1 minute, recovery_target: 2 hours}
+security: {authentication: mTLS/OAuth reference, transport_encryption: true, data_classification: confidential}
+tests:
+- {id: publish-order, description: Order event reaches all declared consumers., expected: processed}
+- {id: duplicate-event, description: Duplicate event is safe at consumers., expected: idempotent}
+profiles:
+  sap: {integration_style: event-driven integration, technology: SAP Event Mesh, integration_assessment_ref: IA-ORDER-EVENT-01, runtime_artifact_id: order.created}

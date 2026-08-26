@@ -15,10 +15,14 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
       - run: pytest -q
-      - run: interface-as-code validate examples/sap-mdg-to-s4-customer
-      - run: interface-as-code validate examples/rest-order-api
-      - run: interface-as-code check examples/sap-mdg-to-s4-customer --fail-on error
-      - run: interface-as-code check examples/rest-order-api --fail-on error
+      - run: python -m build
+      - run: interface-as-code validate examples
+      - run: interface-as-code check examples --fail-on error
+      - run: interface-as-code controls examples/sap-mdg-to-s4-customer/interface.yaml -o generated/customer-controls.md
+      - run: interface-as-code observability examples/sap-event-mesh-order/interface.yaml -o generated/order-event-observability.md
+      - run: interface-as-code test-plan examples/sap-event-mesh-order/interface.yaml -o generated/order-event-tests.md
+      - run: interface-as-code export backstage examples/rest-order-api/interface.yaml -o generated/backstage.yaml
+      - run: interface-as-code export leanix examples/rest-order-api/interface.yaml -o generated/leanix.yaml
       - run: interface-as-code import-csv examples/reference-landscape/inventory.csv generated/reference-landscape
       - run: interface-as-code validate generated/reference-landscape
       - run: interface-as-code catalog generated/reference-landscape -o generated/reference-catalog

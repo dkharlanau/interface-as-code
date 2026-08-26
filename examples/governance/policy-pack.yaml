@@ -1,0 +1,7 @@
+version: '1'
+name: critical-enterprise
+rules:
+  evidence.missing:
+    enabled: false
+  security.classification-missing:
+    severity: error
