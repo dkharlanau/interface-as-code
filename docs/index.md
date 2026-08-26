@@ -14,6 +14,7 @@ Interface as Code is a Git-native operational contract and governance toolkit fo
 ## Integrate
 
 - [Typed artifact references](composition.md)
+- [Bind a Mapping as Code contract](mapping-as-code-binding.md)
 - [OpenAPI / AsyncAPI interoperability](standards-interoperability.md)
 - [Operational generators](operational-generators.md)
 - [Policy packs and overlays](policy-packs-and-overlays.md)
