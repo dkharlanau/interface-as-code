@@ -6,19 +6,50 @@ from typing import Any
 from .loader import load_yaml
 from .validator import discover_specs,validate_spec
 from .policies import check_spec
+from .renderer import render_markdown
 
 def _targets(spec):
     i=spec["interface"];return i.get("consumers") or [i["target"]]
 
-def _revision(root: str|Path) -> str|None:
-    base=Path(root)
-    cwd=base if base.is_dir() else base.parent
-    proc=subprocess.run(["git","rev-parse","HEAD"],cwd=cwd,capture_output=True,text=True,check=False)
-    return proc.stdout.strip() if proc.returncode==0 else None
+def _git_context(root: str|Path) -> dict[str,str|None]:
+    base=Path(root);cwd=base if base.is_dir() else base.parent
+    rev=subprocess.run(["git","rev-parse","HEAD"],cwd=cwd,capture_output=True,text=True,check=False)
+    top=subprocess.run(["git","rev-parse","--show-toplevel"],cwd=cwd,capture_output=True,text=True,check=False)
+    remote=subprocess.run(["git","config","--get","remote.origin.url"],cwd=cwd,capture_output=True,text=True,check=False)
+    revision=rev.stdout.strip() if rev.returncode==0 else None
+    repo_root=top.stdout.strip() if top.returncode==0 else None
+    raw=remote.stdout.strip() if remote.returncode==0 else None
+    repo_url=None
+    if raw:
+        if raw.startswith("git@github.com:"):
+            repo_url="https://github.com/"+raw.split(":",1)[1]
+        elif raw.startswith("https://github.com/"):
+            repo_url=raw
+        if repo_url and repo_url.endswith(".git"):repo_url=repo_url[:-4]
+    return {"revision":revision,"repo_root":repo_root,"repo_url":repo_url}
+
+def _artifact_links(spec:dict[str,Any],spec_path:Path,ctx:dict[str,str|None])->list[tuple[str,str]]:
+    links=[]
+    revision,repo_root,repo_url=ctx.get("revision"),ctx.get("repo_root"),ctx.get("repo_url")
+    def url_for(uri:str)->str:
+        if uri.startswith(("http://","https://")):return uri
+        if repo_root and repo_url and revision:
+            target=(spec_path.parent/uri).resolve()
+            try:rel=target.relative_to(Path(repo_root)).as_posix();return f"{repo_url}/blob/{revision}/{rel}"
+            except ValueError:pass
+        return uri
+    for label,section in (("Contract","contract"),("Mapping","mapping"),("Reconciliation","reconciliation")):
+        obj=spec.get(section,{})
+        if isinstance(obj,dict):
+            ref=obj.get("ref")
+            if isinstance(ref,dict) and ref.get("uri"):links.append((f"{label} reference",url_for(str(ref["uri"]))))
+            for key in ("schema_ref","file"):
+                if obj.get(key):links.append((f"{label} {key}",url_for(str(obj[key]))))
+    return links
 
 def build_catalog(root:str|Path,output:str|Path,filters:dict[str,str]|None=None)->dict[str,Any]:
     filters={k:v for k,v in (filters or {}).items() if v}
-    revision=_revision(root)
+    ctx=_git_context(root);revision=ctx.get("revision")
     out=Path(output);out.mkdir(parents=True,exist_ok=True);details=out/"interfaces";details.mkdir(exist_ok=True);records=[];invalid=[]
     for path in discover_specs(root):
         issues=validate_spec(path)
@@ -32,8 +63,19 @@ def build_catalog(root:str|Path,output:str|Path,filters:dict[str,str]|None=None)
             continue
         if filters.get("criticality") and record["criticality"] != filters["criticality"]:
             continue
+        if ctx.get("repo_root") and ctx.get("repo_url") and revision:
+            try:
+                rel=path.resolve().relative_to(Path(str(ctx["repo_root"]))).as_posix()
+                record["provenance"]["source_url"]=f"{ctx['repo_url']}/blob/{revision}/{rel}"
+                record["provenance"]["history_url"]=f"{ctx['repo_url']}/commits/{revision}/{rel}"
+            except ValueError:pass
         records.append(record)
-        body=f"<h1>{html.escape(i['name'])}</h1><p><code>{html.escape(i['id'])}</code></p><p>{html.escape(record['source'])} → {html.escape(', '.join(record['targets']))}</p><h2>Readiness</h2><ul>"+"".join(f"<li><strong>{html.escape(x.severity)}</strong> {html.escape(x.code)} — {html.escape(x.message)}</li>" for x in findings)+"</ul>"
+        md_name=f"{i['id']}.md"; (details/md_name).write_text(render_markdown(spec),encoding="utf-8")
+        links=[f"<li><a href='{html.escape(md_name)}'>Generated Markdown documentation</a></li>"]
+        if record["provenance"].get("source_url"):links.append(f"<li><a href='{html.escape(record['provenance']['source_url'])}'>Source specification</a></li>")
+        if record["provenance"].get("history_url"):links.append(f"<li><a href='{html.escape(record['provenance']['history_url'])}'>Change history</a></li>")
+        for label,url in _artifact_links(spec,path,ctx):links.append(f"<li><a href='{html.escape(url)}'>{html.escape(label)}</a></li>")
+        body=f"<h1>{html.escape(i['name'])}</h1><p><code>{html.escape(i['id'])}</code></p><p>{html.escape(record['source'])} → {html.escape(', '.join(record['targets']))}</p><h2>Artifacts</h2><ul>{''.join(links)}</ul><h2>Readiness</h2><ul>"+"".join(f"<li><strong>{html.escape(x.severity)}</strong> {html.escape(x.code)} — {html.escape(x.message)}</li>" for x in findings)+"</ul>"
         (details/f"{i['id']}.html").write_text("<!doctype html><meta charset='utf-8'><title>"+html.escape(i['name'])+"</title>"+body,encoding="utf-8")
     summary={"total":len(records),"invalid":len(invalid),"filters":filters,"protocols":dict(Counter(x["protocol"] for x in records)),"criticality":dict(Counter(x["criticality"] for x in records)),"systems":len({x["source"] for x in records}|{t for x in records for t in x["targets"]})};index={"summary":summary,"interfaces":records,"invalid":invalid};(out/"index.json").write_text(json.dumps(index,indent=2),encoding="utf-8")
     edges=[f'    "{r["source"]}" -->|"{r["id"]}"| "{target}"' for r in records for target in r["targets"]];(out/"topology.mmd").write_text("flowchart LR\n"+"\n".join(edges)+"\n",encoding="utf-8")

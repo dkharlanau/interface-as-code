@@ -35,6 +35,14 @@ interface-as-code drift interfaces/customer/interface.yaml observed-evidence.yam
 
 `interface-as-code` is the canonical public command. `iac` remains a compatibility alias.
 
+A versioned wheel is attached to GitHub releases, so installation does not require cloning:
+
+```bash
+pip install https://github.com/dkharlanau/interface-as-code/releases/download/v0.3.0/interface_as_code-0.3.0-py3-none-any.whl
+```
+
+The GitHub Action is consumable as `dkharlanau/interface-as-code@v0`. See [distribution](docs/distribution.md).
+
 ## Why this is useful
 
 The product is deliberately not an integration runtime or a replacement for specialized standards. OpenAPI/AsyncAPI remain authoritative contract artifacts; Pact remains contract-test evidence; OpenTelemetry remains the telemetry semantic layer; Backstage/LeanIX remain catalogs; SAP tools remain design/runtime systems. Interface as Code links their relevant facts into one **operational contract** and adds deterministic governance around them.

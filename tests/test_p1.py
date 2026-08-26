@@ -86,7 +86,6 @@ def test_leanix_inbound_is_comparison_not_overwrite():
     from interface_as_code.adapters import compare_leanix_snapshot
     diffs=compare_leanix_snapshot(load_yaml(ROOT/'examples/rest-order-api/interface.yaml'),{'externalId':'ORDER-API-01','provider':'WRONG'});assert diffs==[{'field':'provider','interface_as_code':'Commerce-Platform','leanix':'WRONG','status':'different'}]
 
-
 def test_import_detects_inconsistent_system_spelling(tmp_path):
     csv=tmp_path/'systems.csv'
     csv.write_text('interface_id,name,source,target,protocol,owner,support_route,business_key\nSYS-001,One,SAP-S4,OMS,REST,Ops,Q,id1\nSYS-002,Two,SAP S4,WMS,REST,Ops,Q,id2\n',encoding='utf-8')
@@ -101,7 +100,6 @@ def test_scoped_catalog_filters_topology(tmp_path):
     topology=(tmp_path/'scoped/topology.mmd').read_text()
     assert 'SAP-S4' in topology
 
-
 def test_catalog_carries_operational_context_and_provenance(tmp_path):
     build_catalog(ROOT/'examples',tmp_path/'catalog')
     svc=CatalogService(tmp_path/'catalog')
@@ -110,3 +108,10 @@ def test_catalog_carries_operational_context_and_provenance(tmp_path):
     assert ops['operations']['reconciliation']['key']=='customer_id'
     assert 'revision' in ops['provenance']
     assert svc.status()['summary']['invalid']==0
+
+def test_catalog_detail_links_generated_docs_and_artifacts(tmp_path):
+    build_catalog(ROOT/'examples',tmp_path/'catalog')
+    detail=(tmp_path/'catalog/interfaces/ORDER-API-01.html').read_text()
+    assert 'Generated Markdown documentation' in detail
+    assert (tmp_path/'catalog/interfaces/ORDER-API-01.md').exists()
+    assert 'Contract schema_ref' in detail
