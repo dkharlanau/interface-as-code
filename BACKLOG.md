@@ -16,13 +16,14 @@ Priorities are based on product value, adoption friction, and differentiation �
 | #10 | reusable GitHub Action and PR policy gate |
 | #21 | realistic 25–50 interface reference landscape used for dogfooding |
 | #19 | installability, docs, search/discoverability, stable schemas, and distribution |
+| #22 | choose an unambiguous public CLI/package name before distribution |
 
 ### P0 release sequence
 
 1. **Adoption foundation** — #4, #1, #5, #6, #21
 2. **Governance loop** — #7, #8, #10
 3. **Portfolio value** — #9
-4. **Distribution and discovery** — #19 runs continuously, but meaningful promotion starts after the governance loop is demonstrable
+4. **Distribution and discovery** — #19 and #22 run continuously, but meaningful promotion starts after the governance loop is demonstrable
 
 ## P1 — Enterprise depth and interoperability
 
