@@ -25,6 +25,22 @@ jobs:
       - run: interface-as-code export leanix examples/rest-order-api/interface.yaml -o generated/leanix.yaml
       - run: interface-as-code import-csv examples/reference-landscape/inventory.csv generated/reference-landscape
       - run: interface-as-code validate generated/reference-landscape
+      - name: Check generated reference-landscape readiness
+        run: interface-as-code check generated/reference-landscape --format json --fail-on error > generated/reference-readiness.json
+      - name: Verify reference-landscape readiness evidence
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+
+          report = json.loads(Path("generated/reference-readiness.json").read_text(encoding="utf-8"))
+          assert len(report) == 30, f"expected 30 generated interface reports, got {len(report)}"
+          assert all(not item["validation"] for item in report), "reference landscape contains invalid generated specs"
+          findings = [finding for item in report for finding in item["findings"]]
+          severities = Counter(finding["severity"] for finding in findings)
+          print(json.dumps({"interfaces": len(report), "findings": len(findings), "severities": severities}, sort_keys=True))
+          PY
       - run: interface-as-code catalog generated/reference-landscape -o generated/reference-catalog
 
   mcp:
