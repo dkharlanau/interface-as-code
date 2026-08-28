@@ -114,7 +114,28 @@ Local refs and optional SHA-256 pins are validated deterministically. External G
 
 ## Portfolio-scale dogfooding
 
-`examples/reference-landscape/inventory.csv` contains 30 synthetic enterprise interfaces. Tests also cover 50-row inventory migration and 100-interface catalog builds. The reproducible benchmark currently records roughly 0.17 s / 1.73 s / 15.56 s for 50 / 500 / 5,000 catalog entries on the development container; see [performance baseline](docs/performance.md).
+[`examples/reference-landscape/`](examples/reference-landscape/) contains a 30-interface synthetic enterprise landscape across IDoc, REST, Kafka, CSV/file and EDI. It is run through CI as a landscape, not only as isolated YAML fixtures.
+
+Use it to answer concrete questions:
+
+- Which interfaces are structurally valid but still lack enough replay, reconciliation, SLA or test detail for production readiness?
+- Which systems and protocols dominate the topology, and where are the critical interfaces?
+- What breaks when an interface target/topology changes?
+- Can a runtime observation match one contract field while drifting from another?
+- What operational controls, observability and test plan follow from each integration style?
+- Can the same source contracts project into Backstage, LeanIX and SAP-oriented review views without creating a second source of truth?
+
+Build the complete retained proof with:
+
+```bash
+python scripts/build_reference_landscape_review.py \
+  --output build/reference-landscape-review \
+  --force
+```
+
+See the [reference landscape guide](examples/reference-landscape/README.md). Contributions that change a major product capability are required to add or update a realistic fixture/reference-landscape scenario; see [CONTRIBUTING](CONTRIBUTING.md).
+
+Tests also cover 50-row inventory migration and 100-interface catalog builds. The reproducible benchmark currently records roughly 0.17 s / 1.73 s / 15.56 s for 50 / 500 / 5,000 catalog entries on the development container; see [performance baseline](docs/performance.md).
 
 ## Read-only MCP
 
@@ -131,6 +152,7 @@ It can list/search/read interface context but cannot modify specs or execute ent
 ## Documentation
 
 - [Product strategy](PRODUCT.md) · [Backlog](BACKLOG.md)
+- [Reference landscape](examples/reference-landscape/README.md) · [Performance baseline](docs/performance.md)
 - [Domain model](docs/domain-model.md) · [Specification](docs/specification.md) · [Versioning](docs/versioning.md)
 - [Excel/CSV migration](docs/migration-from-excel.md) · [Standards interoperability](docs/standards-interoperability.md)
 - [Production readiness](docs/readiness.md) · [Semantic diff](docs/semantic-diff.md) · [Drift](docs/drift.md)
