@@ -44,6 +44,15 @@ jobs:
           print(json.dumps({"interfaces": len(report), "findings": len(findings), "severities": severities}, sort_keys=True))
           PY
       - run: interface-as-code catalog generated/reference-landscape -o generated/reference-catalog
+      - name: Build complete reference-landscape review set
+        run: python scripts/build_reference_landscape_review.py --output build/reference-landscape-review --force
+      - name: Upload reference-landscape review set
+        uses: actions/upload-artifact@v4
+        with:
+          name: interface-reference-landscape-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/reference-landscape-review
+          if-no-files-found: error
+          retention-days: 90
 
   mcp:
     runs-on: ubuntu-latest
