@@ -20,6 +20,15 @@ def load_yaml(path: Path):
     return value
 
 
+def fixture_paths(root: Path, expectation: str) -> list[Path]:
+    if expectation == "valid":
+        # A valid scenario may carry referenced OpenAPI/AsyncAPI or other YAML files.
+        # Only the Interface as Code root document is a spec conformance fixture.
+        return sorted(root.rglob("interface.yaml"))
+    # Invalid fixtures are deliberately standalone documents named by the failure case.
+    return sorted(root.rglob("*.yaml"))
+
+
 def run(version: str) -> dict:
     schema_path = ROOT / "spec" / f"v{version}" / "interface.schema.json"
     fixture_root = ROOT / "conformance" / f"v{version}"
@@ -31,7 +40,7 @@ def run(version: str) -> dict:
     records = []
     failed = False
     for expectation in ("valid", "invalid"):
-        for path in sorted((fixture_root / expectation).rglob("*.yaml")):
+        for path in fixture_paths(fixture_root / expectation, expectation):
             errors = sorted(validator.iter_errors(load_yaml(path)), key=lambda item: list(item.path))
             observed = "invalid" if errors else "valid"
             passed = observed == expectation
