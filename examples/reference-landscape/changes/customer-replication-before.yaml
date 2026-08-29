@@ -1,0 +1,33 @@
+version: '1.0'
+interface:
+  id: REF-CHANGE-CUSTOMER-01
+  name: Reference customer replication change scenario
+  description: Controlled before-state used to demonstrate semantic interface diff on the public reference landscape.
+  source: {system: SAP-MDG, object: BusinessPartner}
+  target: {system: SAP-S4, object: Customer}
+  mode: async
+  pattern: message-driven
+  criticality: high
+  lifecycle: active
+  tags: [reference-landscape, sap, mdg, controlled-change]
+ownership: {business: Master Data, technical: Integration Platform, support: Master Data Operations}
+route:
+  middleware: [SAP-Integration-Layer]
+  external_ids: {catalog: REF-CHANGE-CUSTOMER-01}
+trigger: {event: CustomerApproved}
+contract: {format: IDoc, message_type: DEBMAS, basic_type: DEBMAS07, version: '1'}
+delivery: {guarantee: at-least-once, ordering: per-key, idempotency: {required: true, key: customer_id}}
+mapping: {file: ../../sap-mdg-to-s4-customer/mapping.yaml, profile: customer-core}
+retry: {strategy: manual, max_attempts: 3, dead_letter: SAP AIF error queue, replay: Reprocess after correction using the operational monitor.}
+monitoring:
+  owner: Master Data Operations
+  support_route: SAP AIF
+  business_key: customer_id
+  signals: [technical_failure, business_validation_failure, processing_age]
+reconciliation: {key: customer_id, frequency: daily, source_of_truth: SAP-MDG, comparison: Compare approved MDG customers with successfully replicated S/4 customers.}
+sla: {expected_latency: 15 minutes, recovery_target: 4 hours}
+security: {transport_encryption: true, data_classification: confidential, personal_data: true}
+tests:
+- {id: happy-path, description: Approved customer is accepted by S/4HANA., fixture: ../../sap-mdg-to-s4-customer/fixtures/customer-approved.yaml, expected: processed}
+profiles:
+  sap: {integration_style: process integration, technology: IDoc, integration_assessment_ref: IA-REF-CHANGE-01, aif_namespace: ZMDG, aif_interface: CUSTOMER_OUT, drf_outbound_implementation: '986'}
