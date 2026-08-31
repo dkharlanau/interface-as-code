@@ -159,6 +159,7 @@ It can list/search/read interface context but cannot modify specs or execute ent
 - [Operational generators](docs/operational-generators.md) · [Security](docs/security.md)
 - [Catalog](docs/catalog.md) · [Catalog adapters](docs/catalog-adapters.md) · [SAP profile](docs/sap-profile.md)
 - [Policy packs / overlays](docs/policy-packs-and-overlays.md) · [MCP](docs/mcp.md)
+- [As-code suite handoffs](docs/as-code-suite.md)
 
 ## Stable specification artifact
 
@@ -166,11 +167,20 @@ Specification v1.0 is published in-repository at [`spec/v1.0/interface.schema.js
 
 ## Related projects
 
-- [Mapping as Code](https://github.com/dkharlanau/mapping-as-code)
-- [Reconciliation as Code](https://github.com/dkharlanau/reconciliation-as-code)
-- [Transformation Graph](https://github.com/dkharlanau/transformation-graph)
-- [Process as Code](https://github.com/dkharlanau/process-as-code)
+See [Interface as Code in the as-code suite](docs/as-code-suite.md) for the typed reference shapes and ownership boundaries.
+
+- [Mapping as Code](https://github.com/dkharlanau/mapping-as-code) — bind a canonical mapping through the tested `mapping.ref` handoff.
+- [Reconciliation as Code](https://github.com/dkharlanau/reconciliation-as-code) — reference the executable control that satisfies an interface's reconciliation expectation; Interface as Code does not run it.
+- [Process as Code](https://github.com/dkharlanau/process-as-code) — connect the operational interface contract to the process step that invokes it.
+- [Decision Tables as Code](https://github.com/dkharlanau/decision-tables-as-code) — govern routing or classification decisions separately; no automatic interface binding is implied.
 
 ## Status
 
 **v0.3:** the deterministic operational-governance core, standards import, enterprise adapters, drift and read-only agent surface are implemented. Distribution/search polish and deeper live vendor integrations remain intentionally separate from the core.
+
+## About the author
+
+Created and maintained by **Dzmitryi Kharlanau**, an SAP consultant and system analyst working across enterprise architecture, data, integration, operations, and practical AI.
+
+- [Website and knowledge base](https://dkharlanau.github.io/)
+- [LinkedIn](https://www.linkedin.com/in/dkharlanau/)

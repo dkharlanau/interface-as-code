@@ -15,8 +15,9 @@
   ],
   "safe_agent_loop": ["read README and interface contract", "validate", "inspect readiness and operational controls", "run semantic diff or drift checks when evidence is supplied", "return findings and generated paths without silently editing intent"],
   "related": [
-    {"product":"mapping-as-code","relationship":"field-level transformation contract"},
-    {"product":"transformation-graph","relationship":"cross-contract dependency graph"},
-    {"product":"enterprise-change-graph","relationship":"enterprise impact context"}
+    {"product":"mapping-as-code","relationship":"typed mapping.ref with a tested endpoint-safe binding command"},
+    {"product":"reconciliation-as-code","relationship":"typed reconciliation.ref for traceability; Interface as Code does not execute the control"},
+    {"product":"process-as-code","relationship":"process steps can reference the operational interface contract"},
+    {"product":"decision-tables-as-code","relationship":"separate routing or classification decisions; no automatic binding"}
   ]
 }
