@@ -14,7 +14,7 @@ status: active
 
 implementation:
   repository_created: true
-  implementation_status: core-v0.1
+  implementation_status: operational-governance-v0.3
   codex_fit: 5/5
   sap_access_required: false
   cli: true
@@ -22,6 +22,12 @@ implementation:
   validation: true
   tests: true
   ci: true
+  semantic_diff: true
+  production_readiness: true
+  catalog: true
+  drift_detection: true
+  read_only_mcp: true
+  spec_version: "1.0"
 
 principles:
   - versionable

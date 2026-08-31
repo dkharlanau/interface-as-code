@@ -5,7 +5,7 @@ Interface as Code is contract-first. Treat interface YAML and referenced specifi
 ## Working loop
 
 1. Read `README.md`, the relevant interface contract, and `docs/agent-manifest.json`.
-2. Validate before comparison, drift analysis, or attestation.
+2. Validate before readiness checks, comparison, drift analysis, or generation.
 3. Inspect contract, implementation binding, runbook, and acceptance requirements as separate concerns.
 4. When proposing a change, show what contract surface changes and which evidence or compatibility checks are affected.
 5. Keep generated or emitted artifacts distinct from hand-authored source.
@@ -21,9 +21,9 @@ Interface as Code is contract-first. Treat interface YAML and referenced specifi
 ## Useful commands
 
 ```bash
-python -m iac validate examples/
-python -m iac inspect examples/
-python -m iac runbook examples/
-python -m iac drift examples/
-python -m iac attest examples/
+interface-as-code validate examples/
+interface-as-code check examples/ --fail-on error
+interface-as-code render examples/sap-mdg-to-s4-customer/interface.yaml
+interface-as-code controls examples/sap-mdg-to-s4-customer/interface.yaml
+interface-as-code catalog examples/ --output generated/catalog
 ```

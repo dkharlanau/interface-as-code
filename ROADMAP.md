@@ -12,29 +12,29 @@
 
 ## v0.2 — Composition
 
-- [ ] formal external references to Mapping as Code and Reconciliation as Code
-- [ ] reference resolver and checksum support
-- [ ] reusable interface profiles
-- [ ] environment overlays without duplicating the base contract
-- [ ] richer test fixtures
+- [x] formal external references to Mapping as Code and Reconciliation as Code
+- [x] reference resolver and checksum support
+- [x] reusable interface profiles
+- [x] environment overlays without duplicating the base contract
+- [x] richer test fixtures
 
 ## v0.3 — Standards interoperability
 
-- [ ] import metadata from OpenAPI
-- [ ] import channel/message metadata from AsyncAPI
-- [ ] generate a compact machine context bundle
-- [ ] map common SAP integration metadata into the canonical model
+- [x] import metadata from OpenAPI
+- [x] import channel/message metadata from AsyncAPI
+- [x] generate a compact machine context bundle
+- [x] map common SAP integration metadata into the canonical model
 
 ## v0.4 — Operations
 
-- [ ] generate monitoring requirements
-- [ ] generate reconciliation control skeletons
-- [ ] generate incident/runbook sections
-- [ ] policy checks for ownership, replay safety, and observability
+- [x] generate monitoring requirements
+- [x] generate reconciliation control skeletons
+- [x] generate incident/runbook sections
+- [x] policy checks for ownership, replay safety, and observability
 
 ## v1.0 — Stable specification
 
-- [ ] compatibility policy
-- [ ] migration tooling
-- [ ] published schema versions
-- [ ] conformance test suite
+- [x] compatibility policy
+- [x] migration tooling
+- [x] published schema versions
+- [x] conformance test suite

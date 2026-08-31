@@ -4,16 +4,16 @@
   "purpose": "Govern enterprise integration contracts across design, implementation binding, operations, acceptance, drift, and evidence.",
   "human_url": "https://dkharlanau.github.io/interface-as-code/",
   "repository": "https://github.com/dkharlanau/interface-as-code",
-  "boundaries": ["not an integration runtime", "do not infer undocumented interface semantics", "validate before drift or attestation decisions", "keep contract source separate from generated evidence"],
-  "capabilities": ["validate contracts", "inspect interfaces", "render runbooks", "emit derived artifacts", "compare versions", "detect drift and compatibility issues", "produce attestations"],
+  "boundaries": ["not an integration runtime", "do not infer undocumented interface semantics", "validate before readiness or drift decisions", "keep contract source separate from generated evidence"],
+  "capabilities": ["validate contracts", "evaluate production-readiness policies", "render operational controls", "emit derived artifacts", "compare versions", "detect declared-versus-observed drift", "build validated catalogs"],
   "entrypoints": [
-    {"type":"cli","command":"python -m iac validate <path>"},
-    {"type":"cli","command":"python -m iac inspect <path>"},
-    {"type":"cli","command":"python -m iac runbook <path>"},
-    {"type":"cli","command":"python -m iac drift <path>"},
-    {"type":"cli","command":"python -m iac attest <path>"}
+    {"type":"cli","command":"interface-as-code validate <path>"},
+    {"type":"cli","command":"interface-as-code check <path> --fail-on error"},
+    {"type":"cli","command":"interface-as-code render <interface.yaml> --format markdown"},
+    {"type":"cli","command":"interface-as-code controls <interface.yaml> --format markdown"},
+    {"type":"cli","command":"interface-as-code catalog <path> --output <catalog-directory>"}
   ],
-  "safe_agent_loop": ["read README and interface contract", "validate", "inspect schema/binding/runbook", "run drift or compatibility checks", "return findings and evidence without silently editing intent"],
+  "safe_agent_loop": ["read README and interface contract", "validate", "inspect readiness and operational controls", "run semantic diff or drift checks when evidence is supplied", "return findings and generated paths without silently editing intent"],
   "related": [
     {"product":"mapping-as-code","relationship":"field-level transformation contract"},
     {"product":"transformation-graph","relationship":"cross-contract dependency graph"},

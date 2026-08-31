@@ -1,33 +1,77 @@
-name: Create v0.3 release
+name: Release
 on:
   push:
-    branches: [main]
-    paths:
-      - .github/workflows/release.yml
+    tags: ["v*"]
+  workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install build
+      - name: Verify version and tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v${VERSION}" ]]; then
+            echo "tag $GITHUB_REF_NAME does not match package version ${VERSION}" >&2
+            exit 1
+          fi
+      - run: python -m pip install build twine
       - run: python -m build
-      - name: Create release and stable Action tag
+      - run: python -m twine check dist/*
+      - name: Verify built wheel
+        shell: bash
+        run: |
+          python -m venv /tmp/interface-release-venv
+          /tmp/interface-release-venv/bin/python -m pip install dist/*.whl
+          /tmp/interface-release-venv/bin/interface-as-code --help >/tmp/interface-as-code-help.txt
+          /tmp/interface-release-venv/bin/interface-as-code validate examples >/tmp/interface-as-code-validation.txt
+          test -s /tmp/interface-as-code-help.txt
+          test -s /tmp/interface-as-code-validation.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: interface-as-code-${{ steps.version.outputs.version }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: interface-as-code-${{ needs.verify.outputs.version }}
+          path: dist
+      - name: Create immutable release and update stable Action tag
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
-          TAG="v${VERSION}"
+          TAG="v${{ needs.verify.outputs.version }}"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --target "$GITHUB_SHA" --title "Interface as Code ${TAG}" --generate-notes
+            gh release create "$TAG" dist/* --verify-tag --title "Interface as Code ${TAG}" --generate-notes
+          else
+            echo "Release ${TAG} already exists; leaving its assets unchanged."
           fi
-          gh release upload "$TAG" dist/* --clobber
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git tag -f v0 "$GITHUB_SHA"
