@@ -27,7 +27,9 @@ reconciliation:
     sha256: <reconciliation-file-sha256>
 ```
 
-Interface validation checks the reference shape and SHA syntax. It does not fetch, validate, or execute the foreign artifact during ordinary validation.
+Interface validation checks the reference shape and SHA syntax. Local referenced files are resolved and their raw bytes are checked when a SHA is supplied; remote references are not fetched by ordinary validation. This does not validate or execute the foreign mapping semantics.
+
+See the [verified Mapping-to-handover rehearsal](mapping-handover-rehearsal.md) for the existing canonical-versus-raw hash mismatch, a controlled synthetic JSON handoff, and its limits.
 
 Mapping as Code can generate the mapping binding after comparing source and target endpoints:
 
