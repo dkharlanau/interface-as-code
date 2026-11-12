@@ -17,6 +17,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def require(condition: bool, message: str) -> None:
+    """Evidence checks must remain active under python -O/-OO."""
+    if not condition:
+        raise ValueError(message)
+
+
 def rehearse(mapping_root: Path) -> dict:
     mapping_root = mapping_root.resolve()
     revision = subprocess.check_output(['git', '-C', str(mapping_root), 'rev-parse', 'HEAD'], text=True).strip()
@@ -43,13 +49,13 @@ def rehearse(mapping_root: Path) -> dict:
         command(mapping_root, 'mapping_as_code.cli', ['bind-interface', interface, mapping,
             '--mapping-uri', 'mapping.yaml', '--revision', revision, '--output', bound])
         b = yaml.safe_load(bound.read_text())
-        assert {k:v for k,v in b.items() if k != 'mapping'} == {k:v for k,v in original.items() if k != 'mapping'}
+        require({k:v for k,v in b.items() if k != 'mapping'} == {k:v for k,v in original.items() if k != 'mapping'}, 'Binding changed non-mapping operational fields.')
         canonical = hashlib.sha256(json.dumps(yaml.safe_load(mapping.read_text()),ensure_ascii=False,sort_keys=True,separators=(',', ':')).encode()).hexdigest()
-        assert b['mapping']['ref']['sha256'] == canonical
+        require(b['mapping']['ref']['sha256'] == canonical, 'Binding digest differs from the canonical mapping digest.')
         rejected = command(ROOT, 'interface_as_code.cli', ['validate', bound], expected=1)
-        assert 'Checksum mismatch' in rejected.stdout
+        require('Checksum mismatch' in rejected.stdout, 'YAML rejection did not identify a checksum mismatch.')
         raw_hash = hashlib.sha256(mapping.read_bytes()).hexdigest()
-        assert raw_hash != canonical
+        require(raw_hash != canonical, 'Fixture no longer demonstrates distinct raw and canonical digests.')
         # Re-serialize the same synthetic document into Mapping's exact canonical
         # JSON representation. This artifact has equal raw and canonical hashes.
         artifact = d / 'mapping.json'
@@ -59,18 +65,18 @@ def rehearse(mapping_root: Path) -> dict:
             '--mapping-uri', 'mapping.json', '--revision', revision, '--output', bound])
         command(ROOT, 'interface_as_code.cli', ['validate', bound])
         report = json.loads(command(ROOT, 'interface_as_code.cli', ['handover', bound, '--format', 'json'], expected=1).stdout)
-        assert report['acceptance']['status'] == 'not_assessed'
-        assert report['acceptance']['replay_authority'] == 'not_granted'
+        require(report['acceptance']['status'] == 'not_assessed', 'Handover unexpectedly claimed acceptance.')
+        require(report['acceptance']['replay_authority'] == 'not_granted', 'Handover unexpectedly granted replay authority.')
         artifact.write_bytes(artifact.read_bytes() + b'\n')
         changed = command(ROOT, 'interface_as_code.cli', ['validate', bound], expected=1)
-        assert 'Checksum mismatch' in changed.stdout
+        require('Checksum mismatch' in changed.stdout, 'Changed-byte rejection did not identify a checksum mismatch.')
         bad = yaml.safe_load(interface.read_text())
         bad['interface']['target']['system'] = 'SYNTHETIC-OTHER'
         bad_path = d / 'mismatch.yaml'; bad_path.write_text(yaml.safe_dump(bad))
         denied = d / 'must-not-exist.yaml'
         p = command(mapping_root, 'mapping_as_code.cli', ['bind-interface', bad_path, mapping,
             '--mapping-uri', 'mapping.yaml', '--output', denied], expected=2)
-        assert 'endpoint mismatch' in p.stderr and not denied.exists()
+        require('endpoint mismatch' in p.stderr and not denied.exists(), 'Endpoint mismatch was not rejected without creating output.')
         return {'mapping_revision': revision, 'mapping_artifact': 'Derived canonical JSON from the pinned synthetic YAML; not a committed mapping.json file.',
                 'consumer_source_sha256': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT / 'src' / 'interface_as_code').rglob('*')) if p.is_file() and p.suffix in ('.py', '.json')},
                 'mapping_canonical_sha256': canonical,

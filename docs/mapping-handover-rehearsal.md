@@ -58,3 +58,17 @@ both tools, not another ad-hoc protocol. That fix belongs with the Mapping owner
 No mapping was executed, no target data reconciled and no SAP system contacted.
 The report preserves existing operational fields rather than inventing owners,
 recovery instructions or acceptance evidence. No human usefulness result is claimed.
+
+### Optimized Python is not a bypass
+
+The rehearsal uses explicit runtime guards, not Python `assert` statements, for
+receipt evidence. `python -O` and `python -OO` must not turn an unexpected
+acceptance grant, changed operational fields or the wrong rejection reason into
+a successful receipt. Ten regression tests check the guards in all three
+interpreter modes and prohibit optimizable assertions in this verifier.
+
+A synthetic negative replay injected `acceptance.status: accepted` into the
+handover response while running the complete rehearsal with `-O`. It exited 1
+with no stdout receipt. The unmodified optimized rehearsal completed its nine
+expected CLI cases. This verifies the diagnostic's fail-closed behavior, not
+operational acceptance or SAP runtime behavior.
