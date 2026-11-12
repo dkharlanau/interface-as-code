@@ -11,22 +11,35 @@ from .policies import Finding
 ALLOWED_OVERLAY_PREFIXES = ("interface.lifecycle", "interface.criticality", "route.external_ids", "route.middleware", "route.hops", "monitoring.", "sla.", "security.", "ownership.support", "retry.dead_letter")
 
 
+def _validate_policy_severities(pack: dict[str, Any]) -> None:
+    rules = pack.get("rules", {})
+    if not isinstance(rules, dict):
+        return  # Unrelated pack-shape behavior is outside this compatibility fix.
+    for code, config in rules.items():
+        if isinstance(config, dict) and "severity" in config:
+            severity = config["severity"]
+            if not isinstance(severity, str) or severity not in ("error", "warning", "info"):
+                raise ValueError(f"Policy rule {code!r}: severity must be error, warning, or info.")
+
+
 def load_policy_pack(path: str | Path) -> dict[str, Any]:
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
         raise ValueError("Policy pack must be a YAML object.")
+    _validate_policy_severities(data)
     return data
 
 
 def apply_policy_pack(findings: list[Finding], pack: dict[str, Any]) -> list[Finding]:
+    _validate_policy_severities(pack)
     rules = pack.get("rules", {}) if isinstance(pack.get("rules", {}), dict) else {}
     out: list[Finding] = []
     for finding in findings:
         cfg = rules.get(finding.code, {})
         if cfg is False or (isinstance(cfg, dict) and cfg.get("enabled") is False):
             continue
-        if isinstance(cfg, dict) and cfg.get("severity"):
-            finding = replace(finding, severity=str(cfg["severity"]))
+        if isinstance(cfg, dict) and "severity" in cfg:
+            finding = replace(finding, severity=cfg["severity"])
         out.append(finding)
     return out
 

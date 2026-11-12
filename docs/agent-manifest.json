@@ -4,20 +4,76 @@
   "purpose": "Govern enterprise integration contracts across design, implementation binding, operations, acceptance, drift, and evidence.",
   "human_url": "https://dkharlanau.github.io/interface-as-code/",
   "repository": "https://github.com/dkharlanau/interface-as-code",
-  "boundaries": ["not an integration runtime", "do not infer undocumented interface semantics", "validate before readiness or drift decisions", "keep contract source separate from generated evidence"],
-  "capabilities": ["validate contracts", "evaluate production-readiness policies", "render operational controls", "emit derived artifacts", "compare versions", "detect declared-versus-observed drift", "build validated catalogs"],
-  "entrypoints": [
-    {"type":"cli","command":"interface-as-code validate <path>"},
-    {"type":"cli","command":"interface-as-code check <path> --fail-on error"},
-    {"type":"cli","command":"interface-as-code render <interface.yaml> --format markdown"},
-    {"type":"cli","command":"interface-as-code controls <interface.yaml> --format markdown"},
-    {"type":"cli","command":"interface-as-code catalog <path> --output <catalog-directory>"}
+  "boundaries": [
+    "not an integration runtime",
+    "do not infer undocumented interface semantics",
+    "validate before readiness or drift decisions",
+    "keep contract source separate from generated evidence"
   ],
-  "safe_agent_loop": ["read README and interface contract", "validate", "inspect readiness and operational controls", "run semantic diff or drift checks when evidence is supplied", "return findings and generated paths without silently editing intent"],
+  "capabilities": [
+    "validate contracts",
+    "evaluate production-readiness policies",
+    "render operational controls",
+    "emit derived artifacts",
+    "compare versions",
+    "detect declared-versus-observed drift",
+    "build validated catalogs",
+    "prepare declaration-based support handover questions without approval",
+    "compare declared handovers without transferring approval"
+  ],
+  "entrypoints": [
+    {
+      "type": "cli",
+      "command": "interface-as-code validate <path>"
+    },
+    {
+      "type": "cli",
+      "command": "interface-as-code check <path> --fail-on error"
+    },
+    {
+      "type": "cli",
+      "command": "interface-as-code render <interface.yaml> --format markdown"
+    },
+    {
+      "type": "cli",
+      "command": "interface-as-code controls <interface.yaml> --format markdown"
+    },
+    {
+      "type": "cli",
+      "command": "interface-as-code catalog <path> --output <catalog-directory>"
+    },
+    {
+      "type": "cli",
+      "command": "interface-as-code handover <interface.yaml> --format markdown"
+    },
+    {
+      "type": "cli",
+      "command": "interface-as-code handover-diff <previous.yaml> <current.yaml> --format markdown"
+    }
+  ],
+  "safe_agent_loop": [
+    "read README and interface contract",
+    "validate",
+    "inspect readiness and operational controls",
+    "run semantic diff or drift checks when evidence is supplied",
+    "return findings and generated paths without silently editing intent"
+  ],
   "related": [
-    {"product":"mapping-as-code","relationship":"typed mapping.ref with a tested endpoint-safe binding command"},
-    {"product":"reconciliation-as-code","relationship":"typed reconciliation.ref for traceability; Interface as Code does not execute the control"},
-    {"product":"process-as-code","relationship":"process steps can reference the operational interface contract"},
-    {"product":"decision-tables-as-code","relationship":"separate routing or classification decisions; no automatic binding"}
+    {
+      "product": "mapping-as-code",
+      "relationship": "typed mapping.ref with a tested endpoint-safe binding command"
+    },
+    {
+      "product": "reconciliation-as-code",
+      "relationship": "typed reconciliation.ref for traceability; Interface as Code does not execute the control"
+    },
+    {
+      "product": "process-as-code",
+      "relationship": "process steps can reference the operational interface contract"
+    },
+    {
+      "product": "decision-tables-as-code",
+      "relationship": "separate routing or classification decisions; no automatic binding"
+    }
   ]
 }
