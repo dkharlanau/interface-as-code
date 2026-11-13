@@ -27,7 +27,9 @@ reconciliation:
     sha256: <reconciliation-file-sha256>
 ```
 
-Interface validation checks the reference shape and SHA syntax. It does not fetch, validate, or execute the foreign artifact during ordinary validation.
+Interface validation checks the reference shape and SHA syntax. Local referenced files are resolved and their raw bytes are checked when a SHA is supplied; remote references are not fetched by ordinary validation. This does not validate or execute the foreign mapping semantics.
+
+See the [verified Mapping-to-handover rehearsal](mapping-handover-rehearsal.md) for the existing canonical-versus-raw hash mismatch, a controlled synthetic JSON handoff, and its limits.
 
 Mapping as Code can generate the mapping binding after comparing source and target endpoints:
 
@@ -48,3 +50,11 @@ map-code bind-interface interface.yaml mapping.yaml \
 ## Handoff rule
 
 Keep foreign artifacts referenced and immutable. Readiness still requires operational details and evidence in the interface contract; a valid mapping or reconciliation reference does not prove the interface can be supported in production.
+
+Local typed artifact references must resolve to regular files. A directory or
+special file is not a usable mapping/contract/evidence artifact even when no
+checksum was supplied. Missing, non-file or unreadable checksum inputs become
+`artifact-reference-invalid` findings rather than an unhandled filesystem error.
+Regular-file symlinks retain existing support; remote references remain unfetched
+and unverified. This is input validation, not filesystem sandboxing, authenticity
+verification or protection against concurrent filesystem replacement.

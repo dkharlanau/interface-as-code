@@ -25,6 +25,8 @@ interface-as-code catalog interfaces/ -o generated/catalog
 interface-as-code controls interfaces/customer/interface.yaml
 interface-as-code observability interfaces/customer/interface.yaml
 interface-as-code test-plan interfaces/customer/interface.yaml
+interface-as-code handover interfaces/customer/interface.yaml --format markdown
+interface-as-code handover-diff previous/interface.yaml interfaces/customer/interface.yaml --format markdown
 
 # Enterprise adapters and runtime evidence
 interface-as-code export backstage interfaces/customer/interface.yaml
@@ -148,6 +150,9 @@ interface-as-code-mcp --catalog generated/catalog/index.json
 ```
 
 It can list/search/read interface context but cannot modify specs or execute enterprise integrations.
+Use `catalog --include-handover` to retain support questions for a targeted
+`get_interface_handover` query, with source hashes and explicit acceptance limits.
+See the [synthetic SAP support-review walkthrough](docs/mcp.md#ask-useful-support-questions-without-granting-execution).
 
 ## Documentation
 
@@ -156,7 +161,7 @@ It can list/search/read interface context but cannot modify specs or execute ent
 - [Domain model](docs/domain-model.md) · [Specification](docs/specification.md) · [Versioning](docs/versioning.md)
 - [Excel/CSV migration](docs/migration-from-excel.md) · [Standards interoperability](docs/standards-interoperability.md)
 - [Production readiness](docs/readiness.md) · [Semantic diff](docs/semantic-diff.md) · [Drift](docs/drift.md)
-- [Operational generators](docs/operational-generators.md) · [Security](docs/security.md)
+- [Support handover](docs/support-handover.md) · [Operational generators](docs/operational-generators.md) · [Security](docs/security.md)
 - [Catalog](docs/catalog.md) · [Catalog adapters](docs/catalog-adapters.md) · [SAP profile](docs/sap-profile.md)
 - [Policy packs / overlays](docs/policy-packs-and-overlays.md) · [MCP](docs/mcp.md)
 - [As-code suite handoffs](docs/as-code-suite.md)
@@ -177,6 +182,11 @@ See [Interface as Code in the as-code suite](docs/as-code-suite.md) for the type
 ## Status
 
 **v0.3:** the deterministic operational-governance core, standards import, enterprise adapters, drift and read-only agent surface are implemented. Distribution/search polish and deeper live vendor integrations remain intentionally separate from the core.
+
+For support handover, [readiness checks](docs/readiness.md#a-blank-owner-is-still-missing)
+now treat whitespace-only scalar operational fields as missing. The synthetic
+handover variant shows why a structurally valid contract can still fail the
+readiness gate; it does not invent an owner or support route.
 
 ## About the author
 

@@ -1,0 +1,20 @@
+# Synthetic handover review; evaluate at 2026-11-08T12:00:00Z with a one-day limit.
+observations:
+  - path: $.interface.id
+    value: ORDER-API-01
+    source: synthetic-runtime-inventory
+    observed_at: '2026-11-08T11:00:00Z'
+  - path: $.interface.lifecycle
+    value: active
+    source: synthetic-runtime-inventory
+    observed_at: not-a-date
+  - path: $.contract.undeclared_version
+    value: null
+    source: synthetic-runtime-inventory
+    observed_at: '2026-11-08T11:00:00Z'
+  - path: $.contract.format
+    source: synthetic-runtime-inventory
+    observed_at: '2026-11-08T11:00:00Z'
+  - path: $.reconciliation.key
+    source: synthetic-runtime-inventory
+    status: unavailable

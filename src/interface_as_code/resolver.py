@@ -37,12 +37,24 @@ def resolve_reference(ref: dict[str, Any], base_dir: Path, verify_checksum: bool
     elif parsed.scheme:
         raise ReferenceError(f"Unsupported reference scheme: {parsed.scheme}")
     else:
-        path = (base_dir / uri).resolve()
-    if not path.exists():
-        raise ReferenceError(f"Referenced artifact does not exist: {uri}")
+        try:
+            path = (base_dir / uri).resolve()
+        except (OSError, RuntimeError) as exc:
+            # RuntimeError represents symlink loops on older supported Python.
+            raise ReferenceError(f"Referenced artifact cannot be resolved: {uri}") from exc
+    try:
+        if not path.exists():
+            raise ReferenceError(f"Referenced artifact does not exist: {uri}")
+        if not path.is_file():
+            raise ReferenceError(f"Referenced artifact is not a regular file: {uri}")
+    except OSError as exc:
+        raise ReferenceError(f"Referenced artifact cannot be inspected: {uri}") from exc
     verified = False
     if expected and verify_checksum:
-        actual = sha256(path.read_bytes()).hexdigest()
+        try:
+            actual = sha256(path.read_bytes()).hexdigest()
+        except OSError as exc:
+            raise ReferenceError(f"Referenced artifact cannot be read: {uri}") from exc
         if actual.lower() != expected.lower():
             raise ReferenceError(f"Checksum mismatch for {uri}: expected {expected}, got {actual}")
         verified = True

@@ -14,7 +14,7 @@ class Finding:
 
 PLACEHOLDERS = {"TODO", "TBD", "UNASSIGNED", "UNKNOWN", "TODO-SOURCE", "TODO-TARGET"}
 def _missing(value: Any) -> bool:
-    return value is None or value == "" or (isinstance(value,str) and value.strip().upper() in PLACEHOLDERS)
+    return value is None or (isinstance(value, str) and (not value.strip() or value.strip().upper() in PLACEHOLDERS))
 def _add(items, severity, code, path, message, remediation):
     items.append(Finding(severity, code, path, message, remediation))
 

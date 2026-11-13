@@ -1,0 +1,87 @@
+{
+  "mapping_revision": "d06bd6ce1d00b02c5dfcc32815f958758f91d86c",
+  "mapping_artifact": "Derived canonical JSON from the pinned synthetic YAML; not a committed mapping.json file.",
+  "consumer_source_sha256": {
+    "src/interface_as_code/__init__.py": "56b5e91c3bb77ab933c25fd65eba883419bdc5691cc94cb9dc840e8f4e3674eb",
+    "src/interface_as_code/adapters.py": "5dbd560f9fde7acf216373e4f81d71573cd2e11fe8e86a44d48f2b39ddda9648",
+    "src/interface_as_code/catalog.py": "71a7a7a0df0c0a994436821a0cfb74e1a39260cfde094e0eeaf9480728637d2c",
+    "src/interface_as_code/catalog_service.py": "26b12abace9c00815b6c0807ebed78cb0dd61d358101ca55fe1ba85e95bfa025",
+    "src/interface_as_code/cli.py": "3cdc4291098c9495869d8f79f91e3be6266ff3e661cb8af73693b4b608ed342d",
+    "src/interface_as_code/controls.py": "f747003339604b23c6c296ac83367022003497ef6aba7577714cc46d40a0cb3e",
+    "src/interface_as_code/diffing.py": "3c206167570b21c735013bc9a16fd8ddabd9bd08e4dbb071460d71dcd4f3c2b0",
+    "src/interface_as_code/drift.py": "15305be524185857fe07ebc5b45fc1eceacc3ea6786824d6348b99e3de6b18c9",
+    "src/interface_as_code/governance.py": "f97145fb3f061bcd65dc85fb55674060ba2db809317928341bf0c121b16620b8",
+    "src/interface_as_code/handover.py": "97fa6fea4e82ca55196aceec37d04115286134c34125965e999e60549dd2a847",
+    "src/interface_as_code/handover_diff.py": "adbdac743944819a9dd547f9c19df49dfcb4f7be8fdcf72891f121bb5d4f7d74",
+    "src/interface_as_code/importer.py": "76a400402562c48ea6dd0629021b631b6022e27b80d899bd648deda99e1913a8",
+    "src/interface_as_code/loader.py": "78f1fe10c3485fa137d2dda5f1925129bed7653b28370919b6348660beedee90",
+    "src/interface_as_code/mcp_server.py": "b5c237ed2e227f8ddff37d462e4f98ddade2bdb8c4020d38536cd10c76214ead",
+    "src/interface_as_code/observability.py": "304b62e94697c87e09d048c22faa333855670e6198bb648ce615b8d686881309",
+    "src/interface_as_code/policies.py": "cf5d59ae2554822c4f698a9b6ced7bfe29727df5788bf2f800f40f615dcf0a4e",
+    "src/interface_as_code/renderer.py": "398833d2c44769e50a3404978f5549da3e083459912e48a7025cf3842fdd2be8",
+    "src/interface_as_code/resolver.py": "3206b32466b4b7e33a6b03cbe0849a0f9348d8e6401d421dd20080635b121a0f",
+    "src/interface_as_code/sap.py": "668243a2fef2a32e9909801750f868ea01a2211905f6ff9c06eef6bb31b25aab",
+    "src/interface_as_code/scaffold.py": "3857c0867ea84b5084a2ef50379805a1ee86b14a59ef85d680725738ba96558c",
+    "src/interface_as_code/schemas/interface.schema.json": "30042b1a2fadc963f40893b4c9e309c80545c985f0afc5e1b76db115aa325fca",
+    "src/interface_as_code/standards.py": "19840a2ca46fdbc170d12bbb925fd73fa2690252e4f61545aaae057c7bc56938",
+    "src/interface_as_code/testplan.py": "77afd567e000778fc4930860486c70f107809594788a1b4c26eef2d82976d4de",
+    "src/interface_as_code/validator.py": "4485e7ec4c65286a650341dddbda455246207ec048fc59e923f316b97d0b991b",
+    "src/interface_as_code/versioning.py": "d996ddb54628c67375a021b7e7dfa78630609e6d38a0d9ee52296d3726327d03"
+  },
+  "mapping_canonical_sha256": "dad825c40afd80415e5d01d623c6c9418ba08a4de549fd0bcd34c05b83f24502",
+  "commands": [
+    {
+      "tool": "mapping_as_code.cli",
+      "command": "validate",
+      "exit": 0
+    },
+    {
+      "tool": "mapping_as_code.cli",
+      "command": "bind-interface",
+      "exit": 0
+    },
+    {
+      "tool": "interface_as_code.cli",
+      "command": "validate",
+      "exit": 1
+    },
+    {
+      "tool": "mapping_as_code.cli",
+      "command": "validate",
+      "exit": 0
+    },
+    {
+      "tool": "mapping_as_code.cli",
+      "command": "bind-interface",
+      "exit": 0
+    },
+    {
+      "tool": "interface_as_code.cli",
+      "command": "validate",
+      "exit": 0
+    },
+    {
+      "tool": "interface_as_code.cli",
+      "command": "handover",
+      "exit": 1
+    },
+    {
+      "tool": "interface_as_code.cli",
+      "command": "validate",
+      "exit": 1
+    },
+    {
+      "tool": "mapping_as_code.cli",
+      "command": "bind-interface",
+      "exit": 2
+    }
+  ],
+  "operational_fields_preserved": true,
+  "yaml_raw_sha256": "f920ae89cc91e8adc4e2903a8515ec5b34334f8cb619b98ac7a9cc792b297c9d",
+  "ordinary_yaml_binding_rejected": true,
+  "canonical_json_binding_validated": true,
+  "changed_bytes_rejected": true,
+  "endpoint_mismatch_rejected": true,
+  "acceptance": "not_assessed",
+  "limits": "Synthetic contract interoperability only; no runtime transformation or SAP proof."
+}

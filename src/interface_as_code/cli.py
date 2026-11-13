@@ -18,8 +18,10 @@ from .observability import render as render_observability
 from .testplan import render as render_test_plan
 from .adapters import render_adapter
 from .sap import apply_offline_metadata, load_offline_metadata, render_sap_summary
-from .drift import compare_evidence, load_evidence
+from .drift import build_drift_report, load_evidence
 from .versioning import SUPPORTED_SPEC_VERSIONS, migrate_spec
+from .handover import build_handover, render_handover
+from .handover_diff import build_handover_diff, handover_diff_gate, render_handover_diff
 
 
 def _print_json(data): print(json.dumps(data,indent=2,default=str))
@@ -56,8 +58,17 @@ def _import_csv(args):
     report=import_csv(args.csv,args.output,load_mapping(args.columns),load_mapping(args.normalize_systems));print(f"GENERATED {len(report['generated'])} interfaces; {len(report['gaps'])} gaps -> {Path(args.output)/'import-report.json'}");return 0
 
 def _check(args):
-    all_findings=[];invalid=0;pack=load_policy_pack(args.policy) if args.policy else None;overlay=load_overlay(args.overlay) if args.overlay else None
-    for path in discover_specs(args.path):
+    specs = discover_specs(args.path)
+    if not specs:
+        print(f"ERROR: no interface.yaml files found under {args.path}", file=sys.stderr)
+        return 2
+    try:
+        pack = load_policy_pack(args.policy) if args.policy else None
+    except ValueError as exc:
+        print(f"ERROR: invalid policy pack: {exc}", file=sys.stderr)
+        return 2
+    all_findings=[];invalid=0;overlay=load_overlay(args.overlay) if args.overlay else None
+    for path in specs:
         validation=validate_spec(path)
         if validation:invalid+=1;all_findings.append({"spec":str(path),"validation":[str(x) for x in validation],"findings":[]});continue
         spec=load_yaml(path)
@@ -91,7 +102,7 @@ def _diff(args):
 
 def _catalog(args):
     filters={"system":args.system,"protocol":args.protocol,"owner":args.owner,"criticality":args.criticality}
-    result=build_catalog(args.path,args.output,filters);print(f"CATALOG {result['summary']['total']} valid / {result['summary']['invalid']} invalid -> {args.output}");return 1 if result['summary']['invalid'] else 0
+    result=build_catalog(args.path,args.output,filters,include_handover=args.include_handover);print(f"CATALOG {result['summary']['total']} valid / {result['summary']['invalid']} invalid -> {args.output}");return 1 if result['summary']['invalid'] else 0
 
 def _standard(args,kind):
     out=Path(args.output);out.mkdir(parents=True,exist_ok=True);fn=import_openapi if kind=="openapi" else import_asyncapi;spec,warnings=fn(args.contract,interface_id=args.interface_id,source=args.source,target=args.target,output_dir=out);path=out/"interface.yaml";previous=load_yaml(path) if path.exists() and args.force else None
@@ -124,11 +135,58 @@ def _explain(args):
     return 0
 
 def _drift(args):
-    findings=compare_evidence(load_yaml(args.spec),load_evidence(args.evidence),stale_after_days=args.stale_after_days)
-    if args.format=="json":_print_json([x.to_dict() for x in findings])
+    try:
+        issues = validate_spec(args.spec)
+        if issues:
+            print("ERROR: invalid interface contract: " + "; ".join(map(str, issues)), file=sys.stderr)
+            return 2
+        report = build_drift_report(
+            load_yaml(args.spec), load_evidence(args.evidence),
+            stale_after_days=args.stale_after_days, evaluated_at=args.evaluated_at,
+        )
+    except (ValueError, OSError, yaml.YAMLError, OverflowError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    if args.format == "report-json":
+        _print_json(report)
+    elif args.format == "json":
+        _print_json(report["findings"])
     else:
-        for x in findings:print(f"- {x.status.upper()} `{x.path}` declared=`{x.declared}` observed=`{x.observed}` source={x.source} — {x.message}")
-    return 1 if any(x.status=="drift" for x in findings) and args.fail_on_drift else 0
+        print(f"Evaluation: {report['evaluated_at']} | freshness limit: {args.stale_after_days} days | {report['outcome'].upper()}")
+        for x in report["findings"]:
+            print(f"- {x['status'].upper()} `{x['path']}` declared=`{x['declared']}` observed=`{x['observed']}` source={x['source']} — {x['message']}")
+    if args.require_complete and not report["complete"]:
+        return 2
+    return 1 if (report["counts"].get("drift") or report["counts"].get("conflict")) and args.fail_on_drift else 0
+
+def _handover(args):
+    try:
+        report = build_handover(args.spec)
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        _print_json(report)
+    else:
+        print(render_handover(report), end="")
+    ranks = {"error": 3, "warning": 2, "info": 1}
+    threshold = ranks.get(args.fail_on, 99)
+    return 1 if any(ranks[q["severity"]] >= threshold for q in report["readiness"]["questions"]) else 0
+
+
+def _handover_diff(args):
+    try:
+        report = build_handover_diff(args.previous, args.current)
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    report['gate'] = handover_diff_gate(report, args.fail_on_change, args.fail_on)
+    if args.format == 'json':
+        _print_json(report)
+    else:
+        print(render_handover_diff(report), end='')
+    return report['gate']['exit']
+
 
 def _sap_import(args):
     spec=load_yaml(args.spec);updated,ignored=apply_offline_metadata(spec,load_offline_metadata(args.metadata));dump_yaml(updated,args.output);print(f"WROTE {args.output}")
@@ -150,12 +208,14 @@ def build_parser():
         s=sub.add_parser(command);s.add_argument("contract");s.add_argument("output");s.add_argument("--id",dest="interface_id",required=True);s.add_argument("--source",required=True);s.add_argument("--target",required=True);s.add_argument("--force",action="store_true")
     c=sub.add_parser("check");c.add_argument("path");c.add_argument("--format",choices=["markdown","json","github"],default="markdown");c.add_argument("--fail-on",choices=["error","warning","info","none"],default="none");c.add_argument("--policy");c.add_argument("--overlay")
     d=sub.add_parser("diff");d.add_argument("old",help="File or REV:path/to/interface.yaml");d.add_argument("new",help="File or REV:path/to/interface.yaml");d.add_argument("--format",choices=["markdown","json"],default="markdown");d.add_argument("--fail-on",choices=["breaking","high-risk","review","informational","none"],default="none")
-    cat=sub.add_parser("catalog");cat.add_argument("path");cat.add_argument("-o","--output",default="generated/catalog");cat.add_argument("--system");cat.add_argument("--protocol");cat.add_argument("--owner");cat.add_argument("--criticality",choices=["low","medium","high","critical"])
+    cat=sub.add_parser("catalog");cat.add_argument("path");cat.add_argument("-o","--output",default="generated/catalog");cat.add_argument("--system");cat.add_argument("--protocol");cat.add_argument("--owner");cat.add_argument("--criticality",choices=["low","medium","high","critical"]);cat.add_argument("--include-handover",action="store_true",help="Include declaration-based support questions for read-only agent queries")
     for command in ("controls","observability","test-plan","sap-summary"):
         g=sub.add_parser(command);g.add_argument("spec");g.add_argument("--format",choices=["markdown","yaml"],default="markdown");g.add_argument("-o","--output");g.add_argument("--overlay")
+    h=sub.add_parser("handover", help="Read-only support brief; not acceptance or replay authority");h.add_argument("spec");h.add_argument("--format",choices=["markdown","json"],default="markdown");h.add_argument("--fail-on",choices=["error","warning","info","none"],default="error")
+    hd=sub.add_parser("handover-diff",help="Compare two declared support handovers without transferring approval");hd.add_argument("previous");hd.add_argument("current");hd.add_argument("--format",choices=["markdown","json"],default="markdown");hd.add_argument("--fail-on-change",choices=["breaking","high-risk","review","informational","none"],default="breaking");hd.add_argument("--fail-on",choices=["error","warning","info","none"],default="error")
     a=sub.add_parser("export");a.add_argument("adapter",choices=["backstage","leanix"]);a.add_argument("spec");a.add_argument("-o","--output")
     e=sub.add_parser("explain");e.add_argument("spec");e.add_argument("--overlay",required=True);e.add_argument("--format",choices=["markdown","json"],default="markdown");e.add_argument("-o","--output")
-    dr=sub.add_parser("drift");dr.add_argument("spec");dr.add_argument("evidence");dr.add_argument("--format",choices=["markdown","json"],default="markdown");dr.add_argument("--stale-after-days",type=int);dr.add_argument("--fail-on-drift",action="store_true")
+    dr=sub.add_parser("drift");dr.add_argument("spec");dr.add_argument("evidence");dr.add_argument("--format",choices=["markdown","json","report-json"],default="markdown");dr.add_argument("--stale-after-days",type=int);dr.add_argument("--fail-on-drift",action="store_true");dr.add_argument("--evaluated-at",help="Fixed ISO 8601 evaluation time with Z or UTC offset");dr.add_argument("--require-complete",action="store_true",help="Exit 2 for unresolved or empty evidence")
     si=sub.add_parser("sap-import-metadata");si.add_argument("spec");si.add_argument("metadata");si.add_argument("-o","--output",required=True)
     mig=sub.add_parser("migrate");mig.add_argument("spec");mig.add_argument("--to",choices=SUPPORTED_SPEC_VERSIONS,required=True);mig.add_argument("-o","--output");mig.add_argument("--in-place",action="store_true")
     return p
@@ -175,6 +235,8 @@ def main():
     if args.command=="export":raise SystemExit(_adapter(args))
     if args.command=="explain":raise SystemExit(_explain(args))
     if args.command=="drift":raise SystemExit(_drift(args))
+    if args.command=="handover":raise SystemExit(_handover(args))
+    if args.command=="handover-diff":raise SystemExit(_handover_diff(args))
     if args.command=="sap-import-metadata":raise SystemExit(_sap_import(args))
     if args.command=="migrate":raise SystemExit(_migrate(args))
 if __name__=="__main__":main()
