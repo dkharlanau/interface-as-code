@@ -34,6 +34,11 @@ def create_server(catalog_path: str):
         return item or {"error":"not_found","interface_id":interface_id}
 
     @server.tool()
+    def get_interface_handover(interface_id: str) -> dict:
+        """Get precomputed support questions, source hash and limits; never authorize replay or acceptance."""
+        return service.handover(interface_id)
+
+    @server.tool()
     def get_catalog_status() -> dict:
         """Return catalog validity summary, invalid-spec list and catalog source path."""
         return service.status()

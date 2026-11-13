@@ -150,6 +150,9 @@ interface-as-code-mcp --catalog generated/catalog/index.json
 ```
 
 It can list/search/read interface context but cannot modify specs or execute enterprise integrations.
+Use `catalog --include-handover` to retain support questions for a targeted
+`get_interface_handover` query, with source hashes and explicit acceptance limits.
+See the [synthetic SAP support-review walkthrough](docs/mcp.md#ask-useful-support-questions-without-granting-execution).
 
 ## Documentation
 
